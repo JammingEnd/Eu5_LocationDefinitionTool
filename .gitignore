@@ -1,0 +1,101 @@
+# -----------------------------
+# Build / Output folders
+# -----------------------------
+bin/
+obj/
+out/
+artifacts/
+
+# Avalonia compiled assets
+*.axaml.g.*
+*.g.cs
+
+# -----------------------------
+# User-specific files
+# -----------------------------
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.csproj.user
+*.rsuser
+*.sln.docstates
+
+# -----------------------------
+# IDEs and tools
+# -----------------------------
+# Visual Studio
+.vs/
+
+# JetBrains Rider / IntelliJ
+.idea/
+
+# VS Code
+.vscode/
+
+# -----------------------------
+# Logs and temporary files
+# -----------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# -----------------------------
+# NuGet / Package manager
+# -----------------------------
+*.nupkg
+*.snupkg
+*.nuspec
+project.lock.json
+*.nuget.props
+*.nuget.targets
+packages/
+
+# -----------------------------
+# OS-specific
+# -----------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+*.pid
+*.seed
+*.pid.lock
+
+# -----------------------------
+# Tooling / Build cache
+# -----------------------------
+*.cache/
+*.vspscc
+*.vssscc
+*.orig
+_ReSharper.*
+_TeamCity*
+coverage/
+TestResult*
+BenchmarkDotNet.Artifacts/
+
+# -----------------------------
+# Avalonia-specific extras
+# -----------------------------
+# Generated XAML preview data
+.axaml.cache/
+.axaml.preview/
+
+# -----------------------------
+# Secrets / Config (if any)
+# -----------------------------
+appsettings.Development.json
+.env
+.env.local

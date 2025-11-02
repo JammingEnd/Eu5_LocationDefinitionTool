@@ -1,0 +1,17 @@
+using Eu5_MapTool.logic;
+
+namespace Eu5_MapTool.Models;
+
+public class ProvinceInfo
+{
+    public string Id { get; private set; } // the province id is the same as the hex color
+    public string Name { get; set; } // the name of the province like its in the files 
+    public ProvinceLocation LocationInfo { get; set; } // info for Location.txt
+    public ProvincePopInfo PopInfo { get; set; }
+    
+    public ProvinceInfo(string id, string name)
+    {
+        Id = id;
+        Name = name;
+    }
+}

@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Eu5_MapTool.ViewModels"
+        xmlns:viewModels="clr-namespace:Eu5_MapTool.ViewModels"
+        x:Class="Eu5_MapTool.Views.StartupDialogWindow"
+        Title="Startup"
+        x:DataType="viewModels:StartupDialogViewModel">
+  <Design.DataContext>
+    <vm:StartupDialogViewModel />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,Auto,Auto"
+        ColumnDefinitions="Auto,Auto"
+        Margin="12"
+        RowSpacing="8"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center">
+    <!-- First directory -->
+    <TextBlock Grid.Row="0" Grid.Column="0" Text="Base Game Directory: " VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+      <TextBox Name="dirA_txt" Width="420" Text="{Binding DirectoryA, Mode=TwoWay}" />
+      <Button Content="Browse..." Margin="6,0,0,0" Click="BrowseDirectoryA_Click"/>
+    </StackPanel>
+
+    <!-- Second directory -->
+    <TextBlock Grid.Row="1" Grid.Column="0" Text="Mod Directory: " VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+      <TextBox Name="dirB_txt" Width="420" Text="{Binding DirectoryB, Mode=TwoWay}" />
+      <Button  Content="Browse..." Margin="6,0,0,0" Click="BrowseDirectoryB_Click"/>
+    </StackPanel>
+
+    <!-- Save button -->
+    <Button Name="SaveBtn" Click="OnSaveClick" Grid.Row="2" Grid.ColumnSpan="2" Content="Save and continue" HorizontalAlignment="Center" Width="160" Command="{Binding SaveAndContinueCommand}" />
+  </Grid>
+</Window>

@@ -1,0 +1,103 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Eu5_MapTool.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="Eu5_MapTool.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Eu5_MapTool">
+
+  <Design.DataContext>
+    <vm:MainWindowViewModel/>
+  </Design.DataContext>
+
+  <DockPanel LastChildFill="True">
+    <!-- Top bar with options -->
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="6" Spacing="6">
+      <!--<Button x:Name="OpenButton" Content="Open..." Click="OpenButton_Click"/>-->
+      <Button x:Name="ResetButton" Content="Reset View" Click="ResetButton_Click"/>
+      <Button Content="WRITE" Margin="0,0,6,0" Click="WriteEdits_Click"/>
+      <TextBlock VerticalAlignment="Center" Margin="12,0,0,0">Zoom:</TextBlock>
+      <TextBlock x:Name="ZoomLabel" VerticalAlignment="Center" Margin="4,0,0,0"/>
+    </StackPanel>
+
+    <!-- Left tools panel -->
+    <Border DockPanel.Dock="Left" Width="200" Background="#252525" Padding="8">
+      <StackPanel Spacing="8">
+        <TextBlock Foreground="White" FontWeight="Bold">Tools</TextBlock>
+        <Button x:Name="SelectBtn" Content="Select" Click="SelectBtn_OnClick" />
+        <Button x:Name="PaintBtn" Content="Paint" Click="PaintBtn_OnClick" />
+        <Button x:Name="ProvinceBtn" Content="Province" Click="ProvinceBtn_OnClick" />
+        <Separator/>
+        <TextBlock Foreground="White" FontWeight="Bold">Layers</TextBlock>
+        <ListBox>
+          <ListBoxItem>Base</ListBoxItem>
+          <ListBoxItem>Provinces</ListBoxItem>
+          <ListBoxItem>Overlay</ListBoxItem>
+        </ListBox>
+      </StackPanel>
+    </Border>
+
+    <!-- Right customization / province info -->
+    <Border Name="RightDock" DockPanel.Dock="Right" Width="400" Background="#282828" Padding="8">
+      
+      
+      <ScrollViewer VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="8">
+          <StackPanel Name="ToolSettingsPanel" >
+            <TextBlock Foreground="White" FontWeight="Bold">Tool Settings</TextBlock>
+            <StackPanel Name="PaintTypePanel" Orientation="Horizontal">
+              <Button Name="PaintTypeLocationBtn" Click="OnSelectPaintTypeLoc">Location</Button>
+              <Button Name="PaintTypePopBtn" Click="OnSelectPaintPop">Popinfo</Button>
+            </StackPanel>
+            <StackPanel Name="ToolOptionsStack"  Orientation="Vertical" Spacing="0">
+            </StackPanel>
+            <Button Click="AddToolApplierClick" >+</Button>
+          </StackPanel>
+          <Separator/>
+
+          <TextBlock Foreground="White" FontWeight="Bold">Location Info</TextBlock>
+          <StackPanel Background="#1E1E1E" Margin="6" Spacing="4">
+            <TextBlock Name="InfoId" Foreground="LightGray" Text="{Binding ProvinceId}" />
+            <TextBlock Name="InfoTopo" Foreground="LightGray" Text="{Binding Topography}" />
+            <TextBlock Name="InfoClimate" Foreground="LightGray" Text="{Binding Climate}" />
+            <TextBlock Name="InfoVeg" Foreground="LightGray" Text="{Binding Vegetation}" />
+            <TextBlock Name="InfoReli" Foreground="LightGray" Text="{Binding Religion}" />
+            <TextBlock Name="InfoCulture" Foreground="LightGray" Text="{Binding Culture}" />
+            <TextBlock Name="InfoRgo" Foreground="LightGray" Text="{Binding RawMaterial}" />
+          </StackPanel>
+          
+          <Separator/>
+          
+          <!-- scroll viewer 2 because uhh... long pop list or whatever-->
+          <ScrollViewer>
+            <StackPanel Name="PopInfoBlock" Background="#1E1E1E" Margin="6" Spacing="4">
+              
+            </StackPanel>
+          </ScrollViewer>
+          
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Center map view -->
+    <Border Background="Black" ClipToBounds="True" Padding="6">
+      <Grid>
+        <!-- Map image: receives pointer events for pan/zoom -->
+        <Image x:Name="MapImage"
+               Source="{Binding MapImage}"
+               Stretch="Uniform"
+               RenderTransformOrigin="0,0"
+               PointerPressed="MapImage_PointerPressed"
+               PointerReleased="MapImage_PointerReleased"
+               PointerMoved="MapImage_PointerMoved"
+               PointerWheelChanged="MapImage_PointerWheelChanged"/>
+
+        <!-- Optional overlays -->
+        <TextBlock x:Name="CenterHint" Text="Use mouse wheel to zoom, drag to pan" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" Opacity="0.7"/>
+      </Grid>
+    </Border>
+  </DockPanel>
+</Window>
