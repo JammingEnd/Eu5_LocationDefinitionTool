@@ -31,7 +31,7 @@ Not available right now.
 ## Notes
 - Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
 
-## Roadblock
+## Roadmap
 - a ping system to dispay recently interacted provinces
 - an overlay for filtering provinces ( using the ping system probs)
 - QoL like remembering file locations
