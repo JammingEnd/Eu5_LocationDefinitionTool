@@ -137,6 +137,8 @@ public class AppStorageService : IAppStorageInterface
         
         string locationFilePath = Path.Combine(_moddedGamePath + StaticConstucts._ProvinceLocationFileName, "Location.txt");
         
+        string popFilePath = Path.Combine(_moddedGamePath + StaticConstucts._ProvinceLocationFileName, "PopLocationInfo.txt");
+        var popInfos = await LoadProvincePopInfoAsync(popFilePath);
         // read all lines from Location.txt and parsing it to ProvinceInfo objects
         var lines = await File.ReadAllLinesAsync(locationFilePath);
         Queue<string> locationLines = new Queue<string>(
@@ -165,18 +167,24 @@ public class AppStorageService : IAppStorageInterface
 
             ProvinceInfo info = provinceInfos[id];
             
-              info.LocationInfo = new ProvinceLocation
-                {
-                    Topography = dict["topography"],
-                    Vegetation = dict["vegetation"],
-                    Climate = dict["climate"],
-                    Religion = dict["religion"],
-                    Culture = dict["culture"],
-                    RawMaterial = dict["raw_material"]
-
-                };
+            info.LocationInfo = new ProvinceLocation
+            {
+                Topography = dict["topography"],
+                Vegetation = dict["vegetation"],
+                Climate = dict["climate"],
+                Religion = dict["religion"],
+                Culture = dict["culture"],
+                RawMaterial = dict["raw_material"]
+            };
+            if (popInfos.TryGetValue(id, out var popInfo))
+            {
+                info.PopInfo = popInfo;
+            }
+              
             
         }
+        
+        
         
         
         
@@ -189,4 +197,82 @@ public class AppStorageService : IAppStorageInterface
         using var fs = File.OpenRead(Path.Combine(_moddedGamePath + StaticConstucts._ProvinceLocationFileName, "locations.png"));
         return new Bitmap(fs);
     }
+    
+    public async Task<Dictionary<string, ProvincePopInfo>> LoadProvincePopInfoAsync(string filePath)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("Province pop file not found", filePath);
+        
+        var lines = await File.ReadAllLinesAsync(filePath);
+        
+        var result = new Dictionary<string, ProvincePopInfo>();
+        string? currentProvince = null;
+        var currentPops = new List<PopDef>();
+        
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+        
+            // province start: stockholm = {
+            if (line.EndsWith("{") && line.Contains('='))
+            {
+                int eq = line.IndexOf('=');
+                currentProvince = line[..eq].Trim();
+                currentPops.Clear();
+                continue;
+            }
+        
+            // end of province block
+            if (line == "}" && currentProvince != null)
+            {
+                result[currentProvince] = new ProvincePopInfo { Pops = new List<PopDef>(currentPops) };
+                currentProvince = null;
+                continue;
+            }
+        
+            // inside block: define_pop = { type = noble size = 0.00021 culture = swedish religion = lutheran }
+            if (currentProvince != null && line.StartsWith("define_pop"))
+            {
+                var pop = new PopDef();
+        
+                // get content between { and }
+                int start = line.IndexOf('{');
+                int end = line.LastIndexOf('}');
+                if (start >= 0 && end > start)
+                {
+                    var inner = line.Substring(start + 1, end - start - 1).Trim();
+                    var parts = inner.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
+                    // parts are like [type, =, noble, size, =, 0.00021, ...]
+                    for (int i = 0; i < parts.Length - 2; i++)
+                    {
+                        if (parts[i] == "=") continue;
+                        switch (parts[i])
+                        {
+                            case "type":
+                                pop.PopType = parts[2]; // value after =
+                                break;
+                            case "size":
+                                if (float.TryParse(parts[5], System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out float s))
+                                    pop.Size = (float)Math.Round(s, 5);
+                                break;
+                            case "culture":
+                                pop.Culture = parts[8];
+                                break;
+                            case "religion":
+                                pop.Religion = parts[11];
+                                break;
+                        }
+                    }
+                    currentPops.Add(pop);
+                }
+            }
+        }
+        
+        return result;
+    }
+        
 }

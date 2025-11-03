@@ -45,9 +45,10 @@ public class ModFileWriterService : IModFileWriter
             var split = line.Split('=', 2); 
             if (split.Length == 2)
             {
-                string hex = split[0].Trim();
-                string value = split[1].Trim();
-                lineDict[hex] = value;
+                string value = split[0].Trim();
+                string hex = split[1].Trim();
+                lineDict[value] = hex;
+                
             }
         }
         
@@ -58,12 +59,21 @@ public class ModFileWriterService : IModFileWriter
 
             // Update existing or add new
             lineDict[hex] = value;
+            Console.WriteLine($"Writing line: {value} = {hex}");
         }
         
+        // value is name and key is hex
         var linesToWrite = lineDict
-            .Select(kvp => $"{kvp.Key} = {kvp.Value}")
+            .Select(kvp => $"{kvp.Value} = {kvp.Key}")
             .ToList();
 
+        // for some unknown reason the first line is reverse... like hello???
+        var oddLine = linesToWrite.FirstOrDefault(x => x.Contains("= PLACEHOLDER_NAME"));
+        if (oddLine != null)
+        {
+            linesToWrite.Remove(oddLine);
+        }
+        
         await File.WriteAllLinesAsync(filePath, linesToWrite);
     }
 

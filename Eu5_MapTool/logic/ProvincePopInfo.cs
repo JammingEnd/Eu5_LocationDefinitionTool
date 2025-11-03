@@ -11,10 +11,15 @@ public class ProvincePopInfo
         Pops = new List<PopDef>();
     }
 }
-public struct PopDef
+public class PopDef
 {
     public string PopType;
     public float Size;
     public string Culture;
     public string Religion;
+    
+    public void UpdateSize(float newSize)
+    {
+        Size = newSize;
+    }
 }

@@ -207,7 +207,7 @@ namespace Eu5_MapTool.Views
                         List<PopDef> info = new List<PopDef>();
                         if (_vm.Provinces.ContainsKey(id))
                         {
-                            info = _vm.Provinces[id].PopInfo.Pops;
+                            info = new List<PopDef>(_vm.Provinces[id].PopInfo.Pops);
                         }
 
                         foreach (var kvp in _toolPopSettings)
@@ -215,7 +215,7 @@ namespace Eu5_MapTool.Views
                             PopDef pop = new PopDef
                             {
                                 PopType = kvp.Key.SelectedValue as string,
-                                Size = (float)kvp.Value.Item1.Value,
+                                Size = (float)Math.Round((float)kvp.Value.Item1.Value, 5),
                                 Culture = kvp.Value.Item2.SelectedValue as string,
                                 Religion = kvp.Value.Item3.SelectedValue as string
                             };
@@ -325,7 +325,7 @@ namespace Eu5_MapTool.Views
         private void UpdateProvinceInfoPanel(string hex)
         {
             PopInfoBlock.Children.Clear();
-            if (_vm.Provinces.TryGetValue(hex, out var provInfo) || _vm._paintedLocations.TryGetValue(hex, out provInfo))
+            if (_vm._paintedLocations.TryGetValue(hex, out var provInfo) || _vm.Provinces.TryGetValue(hex, out provInfo))
             {
                 _vm.ProvinceId = provInfo.Id;
                 _vm.Topography = provInfo.LocationInfo.Topography;
@@ -418,7 +418,7 @@ namespace Eu5_MapTool.Views
         private void AddToolApplierClick(object? sender, RoutedEventArgs e)
         {
             //TODO: when clicking the +, add new filter instance to the list
-            if(_toolLocationSettings.Count == 6 || _toolLocationSettings.Any(x => string.IsNullOrWhiteSpace(x.Key.SelectedValue as string)))
+            if((_activePaintType == PaintType.LocationInfo && _toolLocationSettings.Count == 6 ) || _toolLocationSettings.Any(x => string.IsNullOrWhiteSpace(x.Key.SelectedValue as string)))
                 return; // cannot create more filters than there are filter options
             
             if (_activeTool == ToolType.Paint)

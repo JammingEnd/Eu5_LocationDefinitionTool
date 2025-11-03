@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -129,6 +130,9 @@ public partial class MainWindowViewModel : ViewModelBase
         provinceId = provinceId.Replace("#", "").Trim();
         
         ProvinceInfo info;
+
+        pops = MergePopUpdates(pops);
+        
         if(_paintedLocations.Keys.Contains(provinceId))
         {
             info = _paintedLocations[provinceId];
@@ -140,12 +144,43 @@ public partial class MainWindowViewModel : ViewModelBase
 
         info.PopInfo = new ProvincePopInfo()
         {
-            
             Pops = pops
         };
+        
 
         _paintedLocations[provinceId] = info;
     }
+
+    // I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS
+    // thanks GPT :3
+    private List<PopDef> MergePopUpdates(List<PopDef> pops)
+    {
+        // We’ll scan from the end so later entries take priority
+        for (int i = pops.Count - 1; i >= 0; i--)
+        {
+            var newer = pops[i];
+            for (int j = 0; j < i; j++)
+            {
+                var older = pops[j];
+
+                // Same PopType, Culture, and Religion
+                if (older.PopType == newer.PopType &&
+                    older.Culture == newer.Culture &&
+                    older.Religion == newer.Religion)
+                {
+                    // Update old one’s size with the newer one’s
+                    older.Size = newer.Size;
+
+                    // Remove the duplicate newer one
+                    pops.RemoveAt(i);
+                    break; // exit inner loop since we removed the newer
+                }
+            }
+        }
+
+        return pops;
+    }
+
     
     // --------- infopanel properties ---------
 
@@ -188,21 +223,29 @@ public partial class MainWindowViewModel : ViewModelBase
             string provinceId = kvp.Key;
             ProvinceInfo info = kvp.Value;
 
-            ProvincePopInfo popInfo = new ProvincePopInfo
+            var locInfo = info.LocationInfo; 
+            if(!new[] { locInfo.Topography, locInfo.Vegetation, locInfo.Climate, locInfo.Culture, locInfo.Religion, locInfo.RawMaterial }.All(string.IsNullOrWhiteSpace))
+                locationQueue[provinceId] = locInfo;
+            
+
+            if (kvp.Value.PopInfo != null)
             {
-                Pops = kvp.Value.PopInfo.Pops
-            };
+                ProvincePopInfo popInfo = new ProvincePopInfo();
+                popInfo.Pops = kvp.Value.PopInfo.Pops;
+                popQueue[provinceId] = popInfo;
+            }
+            
            
-            locationQueue[provinceId] = info.LocationInfo;
             locMap.Add((info.Id, info.Name));
-            popQueue[provinceId] = popInfo;
         }
 
         await _writerService.WriteLocationMapAsync(locMap);
         
-        await _writerService.WriteLocationInfoAsync(locationQueue);
+        if(locationQueue.Count > 0)
+            await _writerService.WriteLocationInfoAsync(locationQueue);
 
-        await _writerService.WriteProvincePopInfoAsync(popQueue);
+        if(popQueue.Count > 0) 
+            await _writerService.WriteProvincePopInfoAsync(popQueue);
         
         _paintedLocations.Clear();
     }
