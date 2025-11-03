@@ -18,4 +18,15 @@ Only updates the province info when you click on an colour
 Enables the paint tools on the right. 
 The paint tools are Location info and Pop info. 
 The Paint Filters Add or Update the provinces. So when you only paint with Climate for example, it'll only affect the climate property.
-For pop info, it update size for pops with the same [ type - religion - culture ] 
+For pop info, it updates size for pops with the same [ type - religion - culture ] 
+
+## Install
+??? gotta build da thing
+
+## Notes
+- Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
+
+## Roadblock
+- a ping system to dispay recently interacted provinces
+- an overlay for filtering provinces ( using the ping system probs)
+- QoL like remembering file locations
