@@ -14,69 +14,78 @@ public class ModFileWriterService : IModFileWriter
     private string _modsDirectory;
 
     private string _nameHexFileName = "";
+    private string _locationPopInfoFileName = "";
 
     public void SetWriteDirectory(string modsDirectory)
     {
         _modsDirectory = modsDirectory;
         
-        string nameHexDir = Path.Combine(_modsDirectory, StaticConstucts._LocationHexToNameDirectory);
-        _nameHexFileName = Directory.GetFiles(nameHexDir).FirstOrDefault();
+        string nameHexDir = Path.Combine(_modsDirectory, StaticConstucts.LOCHEXTONAMEPATH);
+        if(Directory.Exists(nameHexDir))
+            _nameHexFileName = Directory.GetFiles(nameHexDir).FirstOrDefault();
+        
+        string locationPopInfoDir = Path.Combine(_modsDirectory, StaticConstucts.MAPDATAPATH);
+        if(Directory.Exists(locationPopInfoDir))
+            _locationPopInfoFileName = Directory.GetFiles(locationPopInfoDir).Where(x => x.Contains("pop")).FirstOrDefault();
     }
 
     public async Task WriteLocationMapAsync(List<(string, string)> loc_name_hex)
     {
         if (string.IsNullOrWhiteSpace(_modsDirectory))
             throw new InvalidOperationException("Write directory is not set.");
-        
-        var filePath = Path.Combine(_modsDirectory, StaticConstucts._LocationHexToNameDirectory, _nameHexFileName);
-        
-        List<string> existingLines = new();
+        if (string.IsNullOrWhiteSpace(_nameHexFileName))
+            throw new InvalidOperationException("Name-Hex file path is not set.");
+
+        var filePath = Path.Combine(_modsDirectory, StaticConstucts.LOCHEXTONAMEPATH, _nameHexFileName);
+
+        var lines = new List<string>();
         if (File.Exists(filePath))
         {
-            existingLines = (await File.ReadAllLinesAsync(filePath))
-                .Where(l => !string.IsNullOrWhiteSpace(l)) 
+            lines = (await File.ReadAllLinesAsync(filePath))
+                .Where(l => !string.IsNullOrWhiteSpace(l))
                 .ToList();
         }
-        
-        var lineDict = new Dictionary<string, string>();
-        foreach (var line in existingLines)
-        {
-            // assuming lines are in the format: HEX = Value
-            var split = line.Split('=', 2); 
-            if (split.Length == 2)
-            {
-                string value = split[0].Trim();
-                string hex = split[1].Trim();
-                lineDict[hex] = value;
-                
-            }
-        }
-        
-        foreach (var pair in loc_name_hex) // loc_name_hex is List<(string, string)>
-        {
-            string hex = pair.Item1;
-            string value = pair.Item2;
 
-            // Update existing or add new
-            lineDict[hex] = value;
-            Console.WriteLine($"Writing line: {value} = {hex}");
-        }
-        // for some unknown reason the first line is reverse... like hello???
-        foreach (var kvp in lineDict)
-        {
-            if (!IsHexString(kvp.Key) )
-            {
-                lineDict.Remove(kvp.Key);
-            }
-        }
-        
-        // value is name and key is hex
-        var linesToWrite = lineDict
-            .Select(kvp => $"{kvp.Key} = {kvp.Value}")
-            .ToList();
+        var dict = lines
+            .Select(l => l.Split('=', 2))
+            .Where(parts => parts.Length == 2)
+            .ToDictionary(
+                parts => parts[0].Trim(),
+                parts => parts[1].Trim(),
+                StringComparer.OrdinalIgnoreCase);
 
-        
-        await File.WriteAllLinesAsync(filePath, linesToWrite);
+        // Apply updates or additions
+        foreach (var (hex, name) in loc_name_hex)
+        {
+            dict[hex] = name;
+        }
+
+        // Preserve ordering of original lines where possible
+        var updatedLines = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var parts = line.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                string hex = parts[0].Trim();
+                if (dict.TryGetValue(hex, out var name))
+                {
+                    updatedLines.Add($"{hex} = {name}");
+                    dict.Remove(hex); // remove processed entries
+                    continue;
+                }
+            }
+            updatedLines.Add(line);
+        }
+
+        // Add any new entries at the end
+        foreach (var kvp in dict)
+        {
+            updatedLines.Add($"{kvp.Key} = {kvp.Value}");
+        }
+
+        await File.WriteAllLinesAsync(filePath, updatedLines);
     }
     
     private bool IsHexString(string input)
@@ -89,7 +98,7 @@ public class ModFileWriterService : IModFileWriter
         if (string.IsNullOrWhiteSpace(_modsDirectory))
             throw new InvalidOperationException("Write directory is not set.");
 
-        string filePath = Path.Combine(_modsDirectory + StaticConstucts._ProvinceLocationFileName, "Location.txt");
+        string filePath = Path.Combine(_modsDirectory + StaticConstucts.MAPDATAPATH, "location.txt");
         
         Dictionary<string, string> existingEntries = new();
 
@@ -143,8 +152,8 @@ public class ModFileWriterService : IModFileWriter
         if (string.IsNullOrWhiteSpace(_modsDirectory))
             throw new InvalidOperationException("Write directory is not set.");
         
-        // use this when its a single file
-        string filePath = Path.Combine(_modsDirectory + StaticConstucts._ProvinceLocationFileName, "PopLocationInfo.txt");
+        // use this when it's a single file
+        string filePath = Path.Combine(_modsDirectory + StaticConstucts.MAPDATAPATH, _locationPopInfoFileName);
 
         Dictionary<string, string> existingEntries = new();
 

@@ -57,7 +57,20 @@ public partial class MainWindowViewModel : ViewModelBase
     public Dictionary<string, ProvinceInfo> Provinces { get; private set; } // these are provinces loaded from cache
     public Dictionary<string, ProvinceInfo> _paintedLocations { get; private set;  } = new Dictionary<string, ProvinceInfo>();
     private ProvinceInfo ActiveProvinceInfo { get; set; }
-    
+
+    public async void LoadProvinces()
+    {
+        try
+        {
+            Dictionary<string, ProvinceInfo> p = await _reader.LoadModdedAsync();
+            Provinces = p;
+            Console.WriteLine("Provinces reloaded: " + Provinces.Count);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error loading provinces: " + e.Message);
+        }
+    }
     public void LoadProvinces(Dictionary<string, ProvinceInfo> p)
     {
         Provinces = p;

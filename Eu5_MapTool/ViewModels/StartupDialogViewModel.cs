@@ -16,10 +16,10 @@ namespace Eu5_MapTool.ViewModels
         public bool WasAccepted { get; private set; }
         
         [ObservableProperty]
-        private string? _directoryA;
+        private string? _directoryA = "";
         
         [ObservableProperty]
-        private string? _directoryB = "/mnt/seagate/eu5/tools/testdata/textfiles/";
+        private string? _directoryB = "";
 
 
         
@@ -53,13 +53,11 @@ namespace Eu5_MapTool.ViewModels
         {
             Console.WriteLine(path);
             if (dirA)
-            {
                 DirectoryA = path;
-                WasAccepted = true;
-            }
-                
             else
                 DirectoryB = path;
+            
+            WasAccepted = true;
         }
     }
 }

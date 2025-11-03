@@ -18,14 +18,14 @@
     <!-- First directory -->
     <TextBlock Grid.Row="0" Grid.Column="0" Text="Base Game Directory: " VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
     <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox Name="dirA_txt" Width="420" Text="{Binding DirectoryA, Mode=TwoWay}" />
+      <TextBox Name="dirA_txt" Width="420" TextChanged="dirA_txtChange" Text="{Binding DirectoryA, Mode=TwoWay}" />
       <Button Content="Browse..." Margin="6,0,0,0" Click="BrowseDirectoryA_Click"/>
     </StackPanel>
 
     <!-- Second directory -->
     <TextBlock Grid.Row="1" Grid.Column="0" Text="Mod Directory: " VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
     <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox Name="dirB_txt" Width="420" Text="{Binding DirectoryB, Mode=TwoWay}" />
+      <TextBox Name="dirB_txt" Width="420" TextChanged="dirB_txtChange" Text="{Binding DirectoryB, Mode=TwoWay}" />
       <Button  Content="Browse..." Margin="6,0,0,0" Click="BrowseDirectoryB_Click"/>
     </StackPanel>
 

@@ -37,8 +37,8 @@ namespace Eu5_MapTool.Views
         
         private ToolType _activeTool = ToolType.Select;
         private PaintType _activePaintType = PaintType.LocationInfo;
-        private Dictionary<ComboBox, ComboBox> _toolLocationSettings = new Dictionary<ComboBox, ComboBox>();
-        private Dictionary<ComboBox, (NumericUpDown, ComboBox, ComboBox)> _toolPopSettings = new Dictionary<ComboBox, (NumericUpDown, ComboBox, ComboBox)>();
+        private Dictionary<AutoCompleteBox, AutoCompleteBox> _toolLocationSettings = new Dictionary<AutoCompleteBox, AutoCompleteBox>();
+        private Dictionary<AutoCompleteBox, (NumericUpDown, AutoCompleteBox, AutoCompleteBox)> _toolPopSettings = new Dictionary<AutoCompleteBox, (NumericUpDown, AutoCompleteBox, AutoCompleteBox)>();
         
         private Color _inactiveColor = Colors.DarkSlateGray;
         private Color _activeColor = Colors.CornflowerBlue;
@@ -183,18 +183,18 @@ namespace Eu5_MapTool.Views
                             
                         }
                         //TODO: exceptions are hardcoded. 
-                        string topography = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Topography")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.Topography).FirstOrDefault() ?? _vm.Cache.Topographies.TopographiesBaseGame.First();
-                        string vegetation = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Vegetation")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.Vegetation).FirstOrDefault() ?? _vm.Cache.Vegetations.VegetationsBaseGame.First();
-                        string climate = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Climate")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.Climate).FirstOrDefault() ?? _vm.Cache.Climates.ClimatesBaseGame.First();
-                        string religion = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Religion")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.Religion).FirstOrDefault() ?? _vm.Cache.Religions.ReligionsBaseGame.First();
-                        string culture = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Culture")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.Culture).FirstOrDefault() ?? _vm.Cache.Cultures.CulturesBaseGame.First();
-                        string rawMaterial = _toolLocationSettings.Where(x => x.Key.SelectedValue as string == "Raw Material")
-                            .Select(x => x.Value.SelectedValue as string ?? loc.RawMaterial).FirstOrDefault() ?? _vm.Cache.RawMaterials.RawMaterialsBaseGame.First();
+                        string topography = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Topography")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Topography).FirstOrDefault() ?? _vm.Cache.Topographies.GetCombined().First();
+                        string vegetation = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Vegetation")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Vegetation).FirstOrDefault() ?? _vm.Cache.Vegetations.GetCombined().First();
+                        string climate = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Climate")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Climate).FirstOrDefault() ?? _vm.Cache.Climates.GetCombined().First();
+                        string religion = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Religion")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Religion).FirstOrDefault() ?? _vm.Cache.Religions.GetCombined().First();
+                        string culture = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Culture")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Culture).FirstOrDefault() ?? _vm.Cache.Cultures.GetCombined().First();
+                        string rawMaterial = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Raw Material")
+                            .Select(x => x.Value.SelectedItem as string ?? loc.RawMaterial).FirstOrDefault() ?? _vm.Cache.RawMaterials.GetCombined().First();
                         
                         _vm.OnPaint(hex, topography, vegetation, climate, religion, culture, rawMaterial);
                         UpdateProvinceInfoPanel(id);
@@ -207,17 +207,21 @@ namespace Eu5_MapTool.Views
                         List<PopDef> info = new List<PopDef>();
                         if (_vm.Provinces.ContainsKey(id))
                         {
-                            info = new List<PopDef>(_vm.Provinces[id].PopInfo.Pops);
+                            if(_vm.Provinces[id].PopInfo != null)
+                                info = new List<PopDef>(_vm.Provinces[id].PopInfo.Pops);
+                            else
+                                _vm.Provinces[id].PopInfo = new ProvincePopInfo();
+                            
                         }
 
                         foreach (var kvp in _toolPopSettings)
                         {
                             PopDef pop = new PopDef
                             {
-                                PopType = kvp.Key.SelectedValue as string,
+                                PopType = kvp.Key.SelectedItem as string,
                                 Size = (float)Math.Round((float)kvp.Value.Item1.Value, 5),
-                                Culture = kvp.Value.Item2.SelectedValue as string,
-                                Religion = kvp.Value.Item3.SelectedValue as string
+                                Culture = kvp.Value.Item2.SelectedItem as string,
+                                Religion = kvp.Value.Item3.SelectedItem as string
                             };
                             info.Add(pop);
                         }
@@ -296,10 +300,10 @@ namespace Eu5_MapTool.Views
                     var comboCulture = kvp.Value.Item2;
                     var comboReligion = kvp.Value.Item3;
 
-                    if (string.IsNullOrWhiteSpace(comboType.SelectedValue as string) ||
+                    if (string.IsNullOrWhiteSpace(comboType.SelectedItem as string) ||
                         sizeInput.Value == 0 ||
-                        string.IsNullOrWhiteSpace(comboCulture.SelectedValue as string) ||
-                        string.IsNullOrWhiteSpace(comboReligion.SelectedValue as string))
+                        string.IsNullOrWhiteSpace(comboCulture.SelectedItem as string) ||
+                        string.IsNullOrWhiteSpace(comboReligion.SelectedItem as string))
                     {
                         return false;
                     }
@@ -312,8 +316,8 @@ namespace Eu5_MapTool.Views
                     var comboType = kvp.Key;
                     var comboValue = kvp.Value;
 
-                    if (string.IsNullOrWhiteSpace(comboType.SelectedValue as string) ||
-                        string.IsNullOrWhiteSpace(comboValue.SelectedValue as string))
+                    if (string.IsNullOrWhiteSpace(comboType.SelectedItem as string) ||
+                        string.IsNullOrWhiteSpace(comboValue.SelectedItem as string))
                     {
                         return false;
                     }
@@ -419,7 +423,7 @@ namespace Eu5_MapTool.Views
         private void AddToolApplierClick(object? sender, RoutedEventArgs e)
         {
             //TODO: when clicking the +, add new filter instance to the list
-            if((_activePaintType == PaintType.LocationInfo && _toolLocationSettings.Count == 6 ) || _toolLocationSettings.Any(x => string.IsNullOrWhiteSpace(x.Key.SelectedValue as string)))
+            if((_activePaintType == PaintType.LocationInfo && _toolLocationSettings.Count == 6 ) || _toolLocationSettings.Any(x => string.IsNullOrWhiteSpace(x.Key.SelectedItem as string)))
                 return; // cannot create more filters than there are filter options
             
             if (_activeTool == ToolType.Paint)
@@ -442,24 +446,24 @@ namespace Eu5_MapTool.Views
                         "Culture",
                         "Raw Material"
                     };
-                    var comboType = new ComboBox
+                    var comboType = new AutoCompleteBox
                     {
                         Width = 120, 
                         ItemsSource = typeInfo,
-                        SelectedValue = "Select Type!",
                         Margin = new Thickness(0, 0, 5, 0),
+                        FilterMode = AutoCompleteFilterMode.Contains, MinimumPrefixLength = 0
                     };
                     
                     // i uhh... gotta remove the type if its active already
                     if(_toolLocationSettings.Count != 0)
-                        comboType.ItemsSource = typeInfo.Where(x => _toolLocationSettings.Keys.All(y => y.SelectedValue as string != x)).ToList();
+                        comboType.ItemsSource = typeInfo.Where(x => _toolLocationSettings.Keys.All(y => y.SelectedItem as string != x)).ToList();
                     
-                    var comboValue = new ComboBox
+                    var comboValue = new AutoCompleteBox
                     {
                         Width = 120,
                         ItemsSource = new List<string> {"Select Type!"},
-                        SelectedIndex = 0,
-                        Margin = new Thickness(0, 0, 5, 0)
+                        Margin = new Thickness(0, 0, 5, 0),
+                        FilterMode = AutoCompleteFilterMode.Contains, MinimumPrefixLength = 0
                     };
                     
                     comboType.SelectionChanged += (s, ev) =>
@@ -494,6 +498,9 @@ namespace Eu5_MapTool.Views
                     };
                     var removeBtn = GenerateRemoveBtn(row, comboType);
                     
+                    comboType.GotFocus += AutoCompleteBox_OnGotFocus;
+                    comboValue.GotFocus += AutoCompleteBox_OnGotFocus;
+                    
                     row.Children.Add(comboType);
                     row.Children.Add(comboValue);
                     row.Children.Add(removeBtn);
@@ -507,13 +514,12 @@ namespace Eu5_MapTool.Views
                 {
                     
                     // pop type
-                    var comboType = new ComboBox
+                    var comboType = new AutoCompleteBox
                     {
                         Width = 180,
                         ItemsSource = _vm.Cache.PopTypes.GetCombined().ToList(),
-                        SelectedIndex = _activePaintType == PaintType.LocationInfo ? 0 : 1,
-                        Margin = new Thickness(0, 0, 5, 0),
-                        SelectedValue = "Select Type!"
+                        Margin = new Thickness(-197, 0, 5, 0),
+                        FilterMode = AutoCompleteFilterMode.Contains, MinimumPrefixLength = 0
                     };
 
                     // for size duh
@@ -529,20 +535,20 @@ namespace Eu5_MapTool.Views
                     };
                     
                     // culture select
-                    var comboCulture = new ComboBox
+                    var comboCulture = new AutoCompleteBox
                     {
                         Width = 180,
                         ItemsSource = _vm.Cache.Cultures.GetCombined().ToList(),
-                        SelectedIndex = 0,
-                        Margin = new Thickness(0, 0, 5, 0)
+                        Margin = new Thickness(-197, 0, 5, 0),
+                        FilterMode = AutoCompleteFilterMode.Contains, MinimumPrefixLength = 0
                     };
                     // religion select
-                    var comboReligion = new ComboBox
+                    var comboReligion = new AutoCompleteBox
                     {
                         Width = 180,
                         ItemsSource = _vm.Cache.Religions.GetCombined().ToList(),
-                        SelectedIndex = 0,
-                        Margin = new Thickness(0, 0, 5, 0)
+                        Margin = new Thickness(-197, 0, 5, 0),
+                        FilterMode = AutoCompleteFilterMode.Contains, MinimumPrefixLength = 0
                     };
                     
                     var removeBtn = GenerateRemoveBtn(row, comboType, 20);
@@ -551,6 +557,10 @@ namespace Eu5_MapTool.Views
 
                     row.Orientation = Orientation.Vertical;
 
+                    comboType.GotFocus += AutoCompleteBox_OnGotFocus;
+                    comboCulture.GotFocus += AutoCompleteBox_OnGotFocus;
+                    comboReligion.GotFocus += AutoCompleteBox_OnGotFocus;
+                    
                     row.Children.Add(comboType);
                     row.Children.Add(sizeInput);
                     row.Children.Add(comboCulture);
@@ -569,7 +579,7 @@ namespace Eu5_MapTool.Views
             }
         }
 
-        private Button GenerateRemoveBtn(StackPanel row, ComboBox comboType, double height = 25)
+        private Button GenerateRemoveBtn(StackPanel row, AutoCompleteBox comboType, double height = 25)
         {
             var removeBtn = new Button
             {
@@ -678,11 +688,24 @@ namespace Eu5_MapTool.Views
         private async void WriteEdits_Click(object? sender, RoutedEventArgs e)
         {
            await _vm.WriteChanges();
+           
+           _vm.LoadProvinces();
         }
 
         private void UpdateNameEvent(object? sender, TextChangedEventArgs textChangedEventArgs)
         {
             _vm.UpdateProvinceName(NameBox.Text);
         }
+
+        private void AutoCompleteBox_OnGotFocus(object? sender, GotFocusEventArgs e)
+        {
+            if (sender is AutoCompleteBox box)
+            {
+                if(string.IsNullOrWhiteSpace(box.Text))
+                    box.IsDropDownOpen = true;
+                box.Text = box.Text;
+            }
+        }
+
     }
 }
