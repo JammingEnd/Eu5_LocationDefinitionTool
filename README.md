@@ -22,6 +22,9 @@ The paint tools are Location info and Pop info.
 The Paint Filters Add or Update the provinces. So when you only paint with Climate for example, it'll only affect the climate property.
 For pop info, it updates size for pops with the same [ type - religion - culture ] 
 
+### Province
+Not available right now.
+
 ## Install
 ??? gotta build da thing
 
@@ -32,3 +35,4 @@ For pop info, it updates size for pops with the same [ type - religion - culture
 - a ping system to dispay recently interacted provinces
 - an overlay for filtering provinces ( using the ping system probs)
 - QoL like remembering file locations
+- Province creation and view 
