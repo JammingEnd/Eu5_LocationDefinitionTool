@@ -8,7 +8,9 @@ Upon starting the app youre prompted with two fields, one for the base game and 
 > 
 > Not selecting the root folders will most likely crash the app when writing
 > 
-> the basegame folder doenst _need_ to be of the basegame, it can also be from another mod you use as reference 
+> the basegame folder doenst _need_ to be of the basegame, it can also be from another mod you use as reference
+
+> While testing nothing catastrophic occured in the files. crashing doesnt write or delete. i still suggest editing it in a backup folder just in case
 
 Once both are selected, the program loads the definitions of the basegame folder and your mod into an internal cache, along with the location map image.
 
@@ -26,10 +28,13 @@ For pop info, it updates size for pops with the same [ type - religion - culture
 Not available right now.
 
 ## Install
-??? gotta build da thing
+Download the Zip, extract it. use the .exe to run
 
-## Notes
+## Notes / Known bugs
 - Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
+- Name Write reverts to placeholder under specific circumstance
+
+Please contact me on discord or create an Issue for any bugs. Provide me with the steps you took to encounter it and i'll see it fixed.
 
 ## Roadmap
 - a ping system to dispay recently interacted provinces
