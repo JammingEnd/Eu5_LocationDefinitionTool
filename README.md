@@ -39,5 +39,4 @@ Please contact me on discord or create an Issue for any bugs. Provide me with th
 ## Roadmap
 - a ping system to dispay recently interacted provinces
 - an overlay for filtering provinces ( using the ping system probs)
-- QoL like remembering file locations
 - Province creation and view 
