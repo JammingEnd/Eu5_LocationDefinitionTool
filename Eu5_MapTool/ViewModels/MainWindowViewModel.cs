@@ -249,4 +249,14 @@ public partial class MainWindowViewModel : ViewModelBase
         
         _paintedLocations.Clear();
     }
+
+    public void UpdateProvinceName(string? nameBoxText)
+    {
+        if (ActiveProvinceInfo == null) return;
+        if (string.IsNullOrWhiteSpace(nameBoxText)) return;
+
+        ActiveProvinceInfo.Name = nameBoxText.Trim();
+        
+        _paintedLocations[ActiveProvinceInfo.Id] = ActiveProvinceInfo;
+    }
 }

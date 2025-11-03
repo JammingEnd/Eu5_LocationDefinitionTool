@@ -47,7 +47,7 @@ public class ModFileWriterService : IModFileWriter
             {
                 string value = split[0].Trim();
                 string hex = split[1].Trim();
-                lineDict[value] = hex;
+                lineDict[hex] = value;
                 
             }
         }
@@ -61,20 +61,27 @@ public class ModFileWriterService : IModFileWriter
             lineDict[hex] = value;
             Console.WriteLine($"Writing line: {value} = {hex}");
         }
+        // for some unknown reason the first line is reverse... like hello???
+        foreach (var kvp in lineDict)
+        {
+            if (!IsHexString(kvp.Key) )
+            {
+                lineDict.Remove(kvp.Key);
+            }
+        }
         
         // value is name and key is hex
         var linesToWrite = lineDict
-            .Select(kvp => $"{kvp.Value} = {kvp.Key}")
+            .Select(kvp => $"{kvp.Key} = {kvp.Value}")
             .ToList();
 
-        // for some unknown reason the first line is reverse... like hello???
-        var oddLine = linesToWrite.FirstOrDefault(x => x.Contains("= PLACEHOLDER_NAME"));
-        if (oddLine != null)
-        {
-            linesToWrite.Remove(oddLine);
-        }
         
         await File.WriteAllLinesAsync(filePath, linesToWrite);
+    }
+    
+    private bool IsHexString(string input)
+    {
+        return input.All(c => "0123456789ABCDEFabcdef".Contains(c));
     }
 
     public async Task WriteLocationInfoAsync(Dictionary<string, ProvinceLocation> locationInfo)

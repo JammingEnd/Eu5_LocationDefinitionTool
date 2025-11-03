@@ -60,6 +60,8 @@
 
           <TextBlock Foreground="White" FontWeight="Bold">Location Info</TextBlock>
           <StackPanel Background="#1E1E1E" Margin="6" Spacing="4">
+            <TextBlock Text="Name:" Foreground="LightGray"/>
+            <TextBox Name="NameBox" TextChanged="UpdateNameEvent"/>
             <TextBlock Name="InfoId" Foreground="LightGray" Text="{Binding ProvinceId}" />
             <TextBlock Name="InfoTopo" Foreground="LightGray" Text="{Binding Topography}" />
             <TextBlock Name="InfoClimate" Foreground="LightGray" Text="{Binding Climate}" />

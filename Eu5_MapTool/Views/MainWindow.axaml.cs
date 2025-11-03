@@ -338,6 +338,7 @@ namespace Eu5_MapTool.Views
 
                 // why does it not update bindings automatically!! grrrrr
                 InfoId.Text = _vm.ProvinceId;
+                NameBox.Text = provInfo.Name;
                 InfoTopo.Text = _vm.Topography;
                 InfoVeg.Text = _vm.Vegetation;
                 InfoClimate.Text = _vm.Climate;
@@ -677,6 +678,11 @@ namespace Eu5_MapTool.Views
         private async void WriteEdits_Click(object? sender, RoutedEventArgs e)
         {
            await _vm.WriteChanges();
+        }
+
+        private void UpdateNameEvent(object? sender, TextChangedEventArgs textChangedEventArgs)
+        {
+            _vm.UpdateProvinceName(NameBox.Text);
         }
     }
 }
