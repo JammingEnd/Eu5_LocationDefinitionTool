@@ -39,7 +39,7 @@ Download the Zip, extract it. use the .exe to run
 ## Notes / Known bugs
 - Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
 - Name Write reverts to placeholder under specific circumstance
-- Painting Pop info whilst there no Location info present yields weird results
+- Painting Pop info whilst there no Location info present yields weird results. to fix this. paint the province with any Location info data and write it. selecting it again should present all data
 
 Please contact me on discord or create an Issue for any bugs. Provide me with the steps you took to encounter it and i'll see it fixed.
 
