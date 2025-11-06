@@ -10,6 +10,8 @@ the app uses folder names to read and write.
 
 ## How to use
 Upon starting the app youre prompted with two fields, one for the base game and one for your mod. Use the browse button to open a file explorer and select the root of your project folders.
+the root of the basegame is `Europa Universalis V/game/`
+
 > DO NOT SWITCH THESE AROUND the app writes to the contents of the MODDED folder
 > 
 > Not selecting the root folders will most likely crash the app when writing
@@ -38,7 +40,6 @@ Download the Zip, extract it. use the .exe to run
 
 ## Notes / Known bugs
 - Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
-- Name Write reverts to placeholder under specific circumstance
 - Painting Pop info whilst there no Location info present yields weird results. to fix this. paint the province with any Location info data and write it. selecting it again should present all data
 
 Please contact me on discord or create an Issue for any bugs. Provide me with the steps you took to encounter it and i'll see it fixed.
