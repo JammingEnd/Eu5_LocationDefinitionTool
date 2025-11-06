@@ -9,7 +9,7 @@ public class ProvinceInfo
     public ProvinceLocation LocationInfo { get; set; } // info for Location.txt
     public ProvincePopInfo PopInfo { get; set; }
     
-    public ProvinceInfo(string id, string name)
+    public ProvinceInfo(string name, string id)
     {
         Id = id;
         Name = name;

@@ -54,7 +54,7 @@ public class AppStorageService : IAppStorageInterface
         
         
         
-        string locationFilePath = Path.Combine(_baseGamePath + StaticConstucts.MAPDATAPATH, "Location.txt");
+        string locationFilePath = Path.Combine(_baseGamePath + StaticConstucts.MAPDATAPATH, "location_templates.txt");
         
         // read all lines from Location.txt and parsing it to ProvinceInfo objects
         var lines = await File.ReadAllLinesAsync(locationFilePath);
@@ -85,12 +85,13 @@ public class AppStorageService : IAppStorageInterface
             
               info.LocationInfo = new ProvinceLocation
                 {
-                    Topography = dict["topography"],
-                    Vegetation = dict["vegetation"],
-                    Climate = dict["climate"],
-                    Religion = dict["religion"],
-                    Culture = dict["culture"],
-                    RawMaterial = dict["raw_material"]
+                    Topography = dict.GetValueOrDefault("topography"),
+                    Vegetation = dict.GetValueOrDefault("vegetation"),
+                    Climate = dict.GetValueOrDefault("climate"),
+                    Religion = dict.GetValueOrDefault("religion"),
+                    Culture = dict.GetValueOrDefault("culture"),
+                    RawMaterial = dict.GetValueOrDefault("raw_material"),
+                    NaturalHarborSuitability = dict.GetValueOrDefault("natural_harbor_suitability", "0.00")
 
                 };
             
@@ -119,38 +120,60 @@ public class AppStorageService : IAppStorageInterface
             Queue<string> mapLines = new Queue<string>(
                 c_lines.Where(line => !string.IsNullOrWhiteSpace(line))
             );
+            
             // line format -> location_name = FFF000
             while (mapLines.Count > 0)
             {
-                string line = mapLines.Dequeue();
+                string line = mapLines.Dequeue().Trim();
+
+                // Skip empty lines or comment/separator lines
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#") || line.StartsWith("####"))
+                    continue;
+                
+                int commentIndex = line.IndexOf('#');
+                if (commentIndex >= 0)
+                    line = line[..commentIndex].Trim();
+                
                 int equalIndex = line.IndexOf('=');
-                if (equalIndex < 0) continue;
+                if (equalIndex < 0)
+                    continue;
                 
                 string hex = line[..equalIndex].Trim();
                 string name = line[(equalIndex + 1)..].Trim();
-                
+
+                // Skip if either side is empty
+                if (string.IsNullOrEmpty(hex) || string.IsNullOrEmpty(name))
+                    continue;
+
+                // Create and store the province info
                 ProvinceInfo info = new ProvinceInfo(hex, name);
-                
                 provinceInfos[hex] = info;
-            }   
+            }
+
             
         }
         Console.WriteLine("Modded Locations mapping loaded: " + provinceInfos.Count + " entries.");
         
         
-        string locationFilePath = Path.Combine(_moddedGamePath + StaticConstucts.MAPDATAPATH, "location.txt");
-        string locationPath = Path.Combine(_moddedGamePath, StaticConstucts.MAPDATAPATH);
+        string locationFilePath = Path.Combine(_moddedGamePath + StaticConstucts.MAPDATAPATH, "location_templates.txt");
+        string popFilePath = Path.Combine(_moddedGamePath + StaticConstucts.POPINFOPATH);
+        
         
         string popLocFilename = "";
-        if(Directory.Exists(locationPath))
-            popLocFilename = Directory.GetFiles(locationPath).Where(x => x.Contains("pop")).FirstOrDefault();
-        string popFilePath = Path.Combine(_moddedGamePath + StaticConstucts.MAPDATAPATH, popLocFilename);
-        var popInfos = await LoadProvincePopInfoAsync(popFilePath);
+        string popLocFull = "";
+        if (Directory.Exists(popFilePath))
+        { 
+            popLocFilename = Directory.GetFiles(popFilePath).Where(x => x.Contains("pops")).FirstOrDefault();
+            popLocFull = Path.Combine(popFilePath, popLocFilename);
+            
+        }
+        var popInfos = await LoadProvincePopInfoAsync(popLocFull);
         // read all lines from Location.txt and parsing it to ProvinceInfo objects
         var lines = await File.ReadAllLinesAsync(locationFilePath);
         Queue<string> locationLines = new Queue<string>(
             lines.Where(line => !string.IsNullOrWhiteSpace(line))
         );
+        //locationLines.Dequeue();
 
 
         while (locationLines.Count > 0)
@@ -171,17 +194,28 @@ public class AppStorageService : IAppStorageInterface
                 string value = parts[i + 2]; // skip '='
                 dict[key] = value;
             }
-
+            
+            try
+            {
+                ProvinceInfo guh = provinceInfos[id];
+                
+            }
+            catch (KeyNotFoundException)
+            {
+                Console.WriteLine("Modded Location id not found in mapping: " + id);
+                continue;
+            }
             ProvinceInfo info = provinceInfos[id];
             
             info.LocationInfo = new ProvinceLocation
             {
-                Topography = dict["topography"],
-                Vegetation = dict["vegetation"],
-                Climate = dict["climate"],
-                Religion = dict["religion"],
-                Culture = dict["culture"],
-                RawMaterial = dict["raw_material"]
+                Topography = dict.GetValueOrDefault("topography"),
+                Vegetation = dict.GetValueOrDefault("vegetation"),
+                Climate = dict.GetValueOrDefault("climate"),
+                Religion = dict.GetValueOrDefault("religion"),
+                Culture = dict.GetValueOrDefault("culture"),
+                RawMaterial = dict.GetValueOrDefault("raw_material"),
+                NaturalHarborSuitability = dict.GetValueOrDefault("natural_harbor_suitability")
             };
             if (popInfos.TryGetValue(id, out var popInfo))
             {
@@ -193,7 +227,19 @@ public class AppStorageService : IAppStorageInterface
         
         Console.WriteLine("Modded Locations loaded: " + provinceInfos.Count + " entries.");
         
-        return provinceInfos;
+        // its sucks that i have to do this  
+        Dictionary<string, ProvinceInfo> finalProvinceInfos = new();
+        
+        foreach (var kvp in provinceInfos)
+        {
+            if (kvp.Key == "hoorn")
+            {
+                Console.WriteLine("googoogaaga");
+            }
+            finalProvinceInfos[kvp.Value.Id] = kvp.Value;
+        }
+        
+        return finalProvinceInfos;
     }
 
     public async Task<Bitmap> LoadMapImageAsync()
@@ -204,34 +250,40 @@ public class AppStorageService : IAppStorageInterface
     }
 
     private async Task<HashSet<string>> LoadListAsync(string directoryPath, string subPath)
-{
-    string fullPath = Path.Combine(directoryPath, StaticConstucts.COMMONPATH + subPath);
-    var dirInfo = new DirectoryInfo(fullPath);
-
-    HashSet<string> result = new HashSet<string>();
-    if (!dirInfo.Exists)
-        return result;
-
-    var fileInfo = dirInfo.GetFiles("*.txt").FirstOrDefault();
-    if (fileInfo == null) throw new FileNotFoundException($"{subPath} file not found: " + fullPath);
-
-    var lines = await File.ReadAllLinesAsync(fileInfo.FullName);
-    int braceDepth = 0;
-    var regex = new Regex(@"^\s*(\w+)\s*=");
-
-    foreach (var line in lines)
     {
-        if (braceDepth == 0)
+        string fullPath = Path.Combine(directoryPath, StaticConstucts.COMMONPATH + subPath);
+        var dirInfo = new DirectoryInfo(fullPath);
+
+        HashSet<string> result = new HashSet<string>();
+        if (!dirInfo.Exists)
+            return result;
+
+        var fileInfos = dirInfo.GetFiles("*.txt");
+        if (fileInfos.Length == 0)
+            throw new FileNotFoundException($"{subPath} files not found: " + fullPath);
+
+        var regex = new Regex(@"^\s*(\w+)\s*=");
+
+        foreach (var fileInfo in fileInfos)
         {
-            var match = regex.Match(line);
-            if (match.Success)
-                result.Add(match.Groups[1].Value);
+            var lines = await File.ReadAllLinesAsync(fileInfo.FullName);
+            int braceDepth = 0;
+
+            foreach (var line in lines)
+            {
+                if (braceDepth == 0)
+                {
+                    var match = regex.Match(line);
+                    if (match.Success)
+                        result.Add(match.Groups[1].Value);
+                }
+                braceDepth += line.Count(c => c == '{') - line.Count(c => c == '}');
+            }
         }
-        braceDepth += line.Count(c => c == '{') - line.Count(c => c == '}');
+
+        return result;
     }
 
-    return result;
-}
 
 public Task<HashSet<string>> LoadTopographyListAsync(string directoryPath) =>
     LoadListAsync(directoryPath, "topography/");
@@ -257,34 +309,39 @@ public async Task<HashSet<string>> LoadRawMaterialListAsync(string directoryPath
     if (!dirInfo.Exists)
         return result;
 
-    var fileInfo = dirInfo.GetFiles("*.txt").FirstOrDefault();
-    if (fileInfo == null) throw new FileNotFoundException("Raw materials file not found: " + fullPath);
+    var fileInfos = dirInfo.GetFiles("*.txt");
+    if (fileInfos.Length == 0)
+        throw new FileNotFoundException("No raw materials files found in: " + fullPath);
 
-    var lines = await File.ReadAllLinesAsync(fileInfo.FullName);
-    string? currentBlock = null;
-    bool isRawMaterial = false;
-    int braceDepth = 0;
     var blockHeaderRegex = new Regex(@"^\s*(\w+)\s*=");
 
-    foreach (var line in lines)
+    foreach (var fileInfo in fileInfos)
     {
-        var headerMatch = blockHeaderRegex.Match(line);
-        if (headerMatch.Success && braceDepth == 0)
+        var lines = await File.ReadAllLinesAsync(fileInfo.FullName);
+        string? currentBlock = null;
+        bool isRawMaterial = false;
+        int braceDepth = 0;
+
+        foreach (var line in lines)
         {
-            currentBlock = headerMatch.Groups[1].Value;
-            isRawMaterial = false;
-        }
+            var headerMatch = blockHeaderRegex.Match(line);
+            if (headerMatch.Success && braceDepth == 0)
+            {
+                currentBlock = headerMatch.Groups[1].Value;
+                isRawMaterial = false;
+            }
 
-        braceDepth += line.Count(c => c == '{') - line.Count(c => c == '}');
+            braceDepth += line.Count(c => c == '{') - line.Count(c => c == '}');
 
-        if (line.Contains("category") && line.Contains("raw_material"))
-            isRawMaterial = true;
+            if (line.Contains("category") && line.Contains("raw_material"))
+                isRawMaterial = true;
 
-        if (braceDepth == 0 && currentBlock != null)
-        {
-            if (isRawMaterial)
-                result.Add(currentBlock);
-            currentBlock = null;
+            if (braceDepth == 0 && currentBlock != null)
+            {
+                if (isRawMaterial)
+                    result.Add(currentBlock);
+                currentBlock = null;
+            }
         }
     }
 
@@ -294,7 +351,7 @@ public async Task<HashSet<string>> LoadRawMaterialListAsync(string directoryPath
 public Task<HashSet<string>> LoadPopTypeListAsync(string directoryPath) =>
     LoadListAsync(directoryPath, "pop_types/");
 
-    public async Task<Dictionary<string, ProvincePopInfo>> LoadProvincePopInfoAsync(string filePath)
+private async Task<Dictionary<string, ProvincePopInfo>> LoadProvincePopInfoAsync(string filePath)
     {
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Province pop file not found", filePath);
@@ -308,7 +365,7 @@ public Task<HashSet<string>> LoadPopTypeListAsync(string directoryPath) =>
         foreach (var rawLine in lines)
         {
             var line = rawLine.Trim();
-            if (string.IsNullOrWhiteSpace(line))
+            if (string.IsNullOrWhiteSpace(line) || line.Contains("locations"))
                 continue;
         
             // province start: stockholm = {
@@ -327,42 +384,47 @@ public Task<HashSet<string>> LoadPopTypeListAsync(string directoryPath) =>
                 currentProvince = null;
                 continue;
             }
-        
+            
             // inside block: define_pop = { type = noble size = 0.00021 culture = swedish religion = lutheran }
             if (currentProvince != null && line.StartsWith("define_pop"))
             {
                 var pop = new PopDef();
-        
-                // get content between { and }
+
                 int start = line.IndexOf('{');
                 int end = line.LastIndexOf('}');
                 if (start >= 0 && end > start)
                 {
                     var inner = line.Substring(start + 1, end - start - 1).Trim();
-                    var parts = inner.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        
-                    // parts are like [type, =, noble, size, =, 0.00021, ...]
-                    for (int i = 0; i < parts.Length - 2; i++)
+
+                    // Split on spaces or tabs, remove empty entries
+                    var parts = inner.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    for (int i = 0; i < parts.Length; i++)
                     {
-                        if (parts[i] == "=") continue;
                         switch (parts[i])
                         {
                             case "type":
-                                pop.PopType = parts[2]; // value after =
+                                if (i + 2 < parts.Length && parts[i + 1] == "=")
+                                    pop.PopType = parts[i + 2];
                                 break;
                             case "size":
-                                if (float.TryParse(parts[5], System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out float s))
-                                    pop.Size = (float)Math.Round(s, 5);
+                                if (i + 2 < parts.Length && parts[i + 1] == "=")
+                                {
+                                    if (float.TryParse(parts[i + 2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float s))
+                                        pop.Size = (float)Math.Round(s, 5);
+                                }
                                 break;
                             case "culture":
-                                pop.Culture = parts[8];
+                                if (i + 2 < parts.Length && parts[i + 1] == "=")
+                                    pop.Culture = parts[i + 2];
                                 break;
                             case "religion":
-                                pop.Religion = parts[11];
+                                if (i + 2 < parts.Length && parts[i + 1] == "=")
+                                    pop.Religion = parts[i + 2];
                                 break;
                         }
                     }
+
                     currentPops.Add(pop);
                 }
             }

@@ -69,6 +69,7 @@
             <TextBlock Name="InfoReli" Foreground="LightGray" Text="{Binding Religion}" />
             <TextBlock Name="InfoCulture" Foreground="LightGray" Text="{Binding Culture}" />
             <TextBlock Name="InfoRgo" Foreground="LightGray" Text="{Binding RawMaterial}" />
+            <TextBlock Name="InfoHarbor" Foreground="LightGray"/>
           </StackPanel>
           
           <Separator/>

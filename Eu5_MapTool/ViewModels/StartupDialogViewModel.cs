@@ -35,7 +35,7 @@ namespace Eu5_MapTool.ViewModels
         [RelayCommand]
         private void SaveAndContinue()
         {
-            //TODO: loadig file from directories and initialize app state
+
             
             
             

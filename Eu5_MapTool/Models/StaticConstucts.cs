@@ -2,7 +2,8 @@ namespace Eu5_MapTool.Models;
 
 public static class StaticConstucts
 {
-    public const string LOCHEXTONAMEPATH = "map_data/named_locations/";
-    public const string MAPDATAPATH = "map_data/";
-    public const string COMMONPATH = "common/";
+    public const string LOCHEXTONAMEPATH = "in_game/map_data/named_locations/";
+    public const string MAPDATAPATH = "in_game/map_data/";
+    public const string COMMONPATH = "in_game/common/";
+    public const string POPINFOPATH = "main_menu/setup/start/";
 }

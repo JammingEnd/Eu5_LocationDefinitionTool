@@ -170,7 +170,7 @@ namespace Eu5_MapTool.Views
                 var (px, py) = GetBitmapCoords(MapImage, bitmap, pos);
                 var color = GetPixelColor(bitmap, px, py);
                 var hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-                string id = hex.Replace("#", "").Trim();
+                string id = hex.Replace("#", "").Trim().ToLower();
                 Console.WriteLine(hex);
                 if (_activeTool == ToolType.Paint)
                 {
@@ -182,7 +182,6 @@ namespace Eu5_MapTool.Views
                              loc = _vm.Provinces[id].LocationInfo;
                             
                         }
-                        //TODO: exceptions are hardcoded. 
                         string topography = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Topography")
                             .Select(x => x.Value.SelectedItem as string ?? loc.Topography).FirstOrDefault() ?? _vm.Cache.Topographies.GetCombined().First();
                         string vegetation = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Vegetation")
@@ -196,7 +195,7 @@ namespace Eu5_MapTool.Views
                         string rawMaterial = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Raw Material")
                             .Select(x => x.Value.SelectedItem as string ?? loc.RawMaterial).FirstOrDefault() ?? _vm.Cache.RawMaterials.GetCombined().First();
                         
-                        _vm.OnPaint(hex, topography, vegetation, climate, religion, culture, rawMaterial);
+                        _vm.OnPaint(id, topography, vegetation, climate, religion, culture, rawMaterial);
                         UpdateProvinceInfoPanel(id);
                     }
                     else if (_activePaintType == PaintType.PopInfo)
@@ -338,6 +337,7 @@ namespace Eu5_MapTool.Views
                 _vm.Religion = provInfo.LocationInfo.Religion;
                 _vm.Culture = provInfo.LocationInfo.Culture;
                 _vm.RawMaterial = provInfo.LocationInfo.RawMaterial;
+                _vm.HarborSuitability = provInfo.LocationInfo.NaturalHarborSuitability;
                 _vm.FormatLocationInfo();
 
                 // why does it not update bindings automatically!! grrrrr
@@ -349,6 +349,7 @@ namespace Eu5_MapTool.Views
                 InfoReli.Text = _vm.Religion;
                 InfoCulture.Text = _vm.Culture;
                 InfoRgo.Text = _vm.RawMaterial;
+                InfoHarbor.Text = _vm.HarborSuitability;
                 
                 // pop info generation
                 if (provInfo.PopInfo != null)
@@ -422,7 +423,6 @@ namespace Eu5_MapTool.Views
 
         private void AddToolApplierClick(object? sender, RoutedEventArgs e)
         {
-            //TODO: when clicking the +, add new filter instance to the list
             if((_activePaintType == PaintType.LocationInfo && _toolLocationSettings.Count == 6 ) || _toolLocationSettings.Any(x => string.IsNullOrWhiteSpace(x.Key.SelectedItem as string)))
                 return; // cannot create more filters than there are filter options
             
@@ -468,7 +468,6 @@ namespace Eu5_MapTool.Views
                     
                     comboType.SelectionChanged += (s, ev) =>
                     {
-                        //TODO: handle selection change
                         string type = comboType.SelectedItem as string ?? "Topography";
                         switch (type)
                         {
@@ -526,9 +525,9 @@ namespace Eu5_MapTool.Views
                     var sizeInput = new NumericUpDown
                     {
                         Width = 180,
-                        Minimum = (decimal)0.00001,
-                        Maximum = 1,
-                        Increment = (decimal)0.0001,
+                        Minimum = (decimal)0.001,
+                        Maximum = 100000,
+                        Increment = (decimal)0.001,
                         Margin = new Thickness(-197, 0, 5, 0),
                         HorizontalAlignment = HorizontalAlignment.Stretch,
                         

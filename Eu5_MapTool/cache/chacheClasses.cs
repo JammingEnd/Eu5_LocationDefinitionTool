@@ -14,7 +14,7 @@ public class Cache
     
     public Cache(ReligionC reli_c, CulturesC cult_c, TopographyC topo_c, VegetationC vege_c, ClimateC clime_c, RawMaterialsC mats_c, PopTypesC pops_c)
     {
-        //TODO: use the StorageService to load cache from disk
+
         Religions = reli_c;
         Cultures = cult_c;
         Topographies = topo_c;

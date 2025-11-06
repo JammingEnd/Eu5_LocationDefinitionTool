@@ -39,13 +39,14 @@ public partial class MainWindowViewModel : ViewModelBase
         Religion = "Religion: ...";
         Culture = "Culture: ...";
         RawMaterial = "Raw Material: ...";
+        HarborSuitability = "Harbor Suitability: ...";
         
         _writerService = new ModFileWriterService();
     }
     
     public void SetCache(Cache cache)
     {
-        //TODO: load provinces from cache
+
         Cache = cache;
     }
     
@@ -68,7 +69,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception e)
         {
-            Console.WriteLine("Error loading provinces: " + e.Message);
+            Console.WriteLine(" mama mia, Error loading provinces: " + e.Message);
         }
     }
     public void LoadProvinces(Dictionary<string, ProvinceInfo> p)
@@ -108,13 +109,12 @@ public partial class MainWindowViewModel : ViewModelBase
         Culture = ActiveProvinceInfo.LocationInfo.Culture;
         RawMaterial = ActiveProvinceInfo.LocationInfo.RawMaterial;
         Climate = ActiveProvinceInfo.LocationInfo.Climate;
+        HarborSuitability = ActiveProvinceInfo.LocationInfo.NaturalHarborSuitability;
         FormatLocationInfo();
     }
 
     public void OnPaint(string provinceId, string topo, string vegetation, string climate, string religion, string culture, string rawMaterial)
     {
-        provinceId = provinceId.Replace("#", "").Trim();
-        
         ProvinceInfo info;
         if(_paintedLocations.Keys.Contains(provinceId))
         {
@@ -122,7 +122,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            info = new ProvinceInfo(provinceId, "PLACEHOLDER_NAME");
+            string name = Provinces.ContainsKey(provinceId) ? Provinces[provinceId].Name : GenerateRandomName();
+            info = new ProvinceInfo(name, provinceId);
         }
 
         info.LocationInfo = new ProvinceLocation()
@@ -136,6 +137,7 @@ public partial class MainWindowViewModel : ViewModelBase
         };
 
         _paintedLocations[provinceId] = info;
+        ActiveProvinceInfo = info;
     }
     
     public void OnPaintPop(string provinceId, List<PopDef> pops)
@@ -152,7 +154,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            info = new ProvinceInfo(provinceId, "PLACEHOLDER_NAME");
+            string name = Provinces.ContainsKey(provinceId) ? Provinces[provinceId].Name : GenerateRandomName();
+            info = new ProvinceInfo(name, provinceId);
         }
 
         info.PopInfo = new ProvincePopInfo()
@@ -162,6 +165,20 @@ public partial class MainWindowViewModel : ViewModelBase
         
 
         _paintedLocations[provinceId] = info;
+        ActiveProvinceInfo = info;
+    }
+
+    private string GenerateRandomName()
+    {
+        string randomName = "___";
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        var random = new Random();
+        for (int i = 0; i < 10; i++)
+        {
+            randomName += chars[random.Next(chars.Length)];
+        }
+        Console.WriteLine("Generating new name for province");
+        return randomName;
     }
 
     // I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS I HATE THIS
@@ -205,6 +222,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string Religion { get; set; }
     public string Culture { get; set; }
     public string RawMaterial { get; set; }
+    public string HarborSuitability { get; set; }
 
     public void FormatLocationInfo()
     {
@@ -215,6 +233,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Religion = "Religion: " + Religion;
         Culture = "Culture: " + Culture;
         RawMaterial = "Raw Material: " + RawMaterial;
+        HarborSuitability = "Harbor Suitability: " + HarborSuitability;
     }
     // --- Pop info ---
     public string ProvinceName = "";
@@ -224,7 +243,6 @@ public partial class MainWindowViewModel : ViewModelBase
     // --------- file writing ---------    
     public async Task WriteChanges()
     {
-        //TODO: implement writing changes to mod files
         Console.WriteLine($"Writing {_paintedLocations.Count} painted locations...");   
         
         Dictionary<string, ProvinceLocation> locationQueue = new Dictionary<string, ProvinceLocation>();
@@ -233,7 +251,7 @@ public partial class MainWindowViewModel : ViewModelBase
         
         foreach (var kvp in _paintedLocations)
         {
-            string provinceId = kvp.Key;
+            string provinceId = kvp.Value.Name; // format requires province name as id
             ProvinceInfo info = kvp.Value;
 
             var locInfo = info.LocationInfo; 

@@ -24,9 +24,9 @@ public class ModFileWriterService : IModFileWriter
         if(Directory.Exists(nameHexDir))
             _nameHexFileName = Directory.GetFiles(nameHexDir).FirstOrDefault();
         
-        string locationPopInfoDir = Path.Combine(_modsDirectory, StaticConstucts.MAPDATAPATH);
+        string locationPopInfoDir = Path.Combine(_modsDirectory, StaticConstucts.POPINFOPATH);
         if(Directory.Exists(locationPopInfoDir))
-            _locationPopInfoFileName = Directory.GetFiles(locationPopInfoDir).Where(x => x.Contains("pop")).FirstOrDefault();
+            _locationPopInfoFileName = Directory.GetFiles(locationPopInfoDir).Where(x => x.Contains("pops")).FirstOrDefault();
     }
 
     public async Task WriteLocationMapAsync(List<(string, string)> loc_name_hex)
@@ -46,47 +46,35 @@ public class ModFileWriterService : IModFileWriter
                 .ToList();
         }
 
-        var dict = lines
-            .Select(l => l.Split('=', 2))
-            .Where(parts => parts.Length == 2)
-            .ToDictionary(
-                parts => parts[0].Trim(),
-                parts => parts[1].Trim(),
-                StringComparer.OrdinalIgnoreCase);
-
-        // Apply updates or additions
-        foreach (var (hex, name) in loc_name_hex)
-        {
-            dict[hex] = name;
-        }
-
-        // Preserve ordering of original lines where possible
-        var updatedLines = new List<string>();
-
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        
+        // i had to refactor the line generation since i had issues duplicating
         foreach (var line in lines)
         {
             var parts = line.Split('=', 2);
             if (parts.Length == 2)
             {
-                string hex = parts[0].Trim();
-                if (dict.TryGetValue(hex, out var name))
-                {
-                    updatedLines.Add($"{hex} = {name}");
-                    dict.Remove(hex); // remove processed entries
-                    continue;
-                }
+                var name = parts[0].Trim();
+                var hex = parts[1].Trim();
+                
+                dict[name] = hex;
             }
-            updatedLines.Add(line);
+        }
+        
+        foreach (var (hex, name) in loc_name_hex)
+        {
+            dict[name] = hex;
         }
 
-        // Add any new entries at the end
-        foreach (var kvp in dict)
-        {
-            updatedLines.Add($"{kvp.Key} = {kvp.Value}");
-        }
+        // im doing this sorting because i experienced some issues with the game reading the file if the order is changed
+        var updatedLines = dict
+            .OrderBy(kvp => kvp.Key)
+            .Select(kvp => $"{kvp.Key} = {kvp.Value}")
+            .ToList();
 
         await File.WriteAllLinesAsync(filePath, updatedLines);
     }
+
     
     private bool IsHexString(string input)
     {
@@ -98,7 +86,7 @@ public class ModFileWriterService : IModFileWriter
         if (string.IsNullOrWhiteSpace(_modsDirectory))
             throw new InvalidOperationException("Write directory is not set.");
 
-        string filePath = Path.Combine(_modsDirectory + StaticConstucts.MAPDATAPATH, "location.txt");
+        string filePath = Path.Combine(_modsDirectory + StaticConstucts.MAPDATAPATH, "location_templates.txt");
         
         Dictionary<string, string> existingEntries = new();
 
@@ -132,11 +120,12 @@ public class ModFileWriterService : IModFileWriter
                              $"climate = {info.Climate} " +
                              $"religion = {info.Religion} " +
                              $"culture = {info.Culture} " +
-                             $"raw_material = {info.RawMaterial} }}";
+                             $"raw_material = {info.RawMaterial} " +
+                             $"natural_harbor_suitability = {info.NaturalHarborSuitability} }}";
 
             existingEntries[id] = newLine; 
         }
-
+        
         // Sort by province id before writing (for consistency)
         var outputLines = existingEntries
             .OrderBy(kvp => kvp.Key)
@@ -148,12 +137,12 @@ public class ModFileWriterService : IModFileWriter
 
     public async Task WriteProvincePopInfoAsync(Dictionary<string, ProvincePopInfo> popInfo)
     {
-        //TODO: Write the pop info to the appropriate mod file
+ 
         if (string.IsNullOrWhiteSpace(_modsDirectory))
             throw new InvalidOperationException("Write directory is not set.");
         
         // use this when it's a single file
-        string filePath = Path.Combine(_modsDirectory + StaticConstucts.MAPDATAPATH, _locationPopInfoFileName);
+        string filePath = Path.Combine(_modsDirectory + StaticConstucts.POPINFOPATH, _locationPopInfoFileName);
 
         Dictionary<string, string> existingEntries = new();
 
@@ -217,13 +206,17 @@ public class ModFileWriterService : IModFileWriter
         
         var output = new StringBuilder();
 
-        foreach (var kvp in existingEntries.OrderBy(k => k.Key)) // optional sorting
+        output.AppendLine("locations = {");
+        
+        foreach (var kvp in existingEntries) 
         {
             output.AppendLine($"{kvp.Key} = {{");
             output.AppendLine(kvp.Value);
             output.AppendLine("}");
             output.AppendLine();
         }
+        
+        output.AppendLine("}");
 
         await File.WriteAllTextAsync(filePath, output.ToString());
     }

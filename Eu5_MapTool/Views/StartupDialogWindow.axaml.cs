@@ -111,7 +111,7 @@ namespace Eu5_MapTool.Views
             {
                 Console.WriteLine("Loading directories:");
                 _storageService.SetDirectories(_vm.DirectoryA!, _vm.DirectoryB!);
-                //TODO: loadig file from directories and initialize app state
+
 
                 CulturesC cache_cultures = new CulturesC(
                     await _storageService.LoadCultureListAsync(_vm.DirectoryA),
