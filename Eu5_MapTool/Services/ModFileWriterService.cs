@@ -78,7 +78,6 @@ public class ModFileWriterService : IModFileWriter
     string filePath = Path.Combine(_modsDirectory, StaticConstucts.MAPDATAPATH, "location_templates.txt");
     string outputLines = "";
     
-    //TODO: using the static maps to generate location info
     
     // format is: ___YMJrkTYLkr = { topography = flatland vegetation = jungle climate = tropical religion = bon culture = dakelh_culture raw_material = horses natural_harbor_suitability =  }
     // 

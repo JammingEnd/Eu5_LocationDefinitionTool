@@ -151,7 +151,6 @@ public partial class MainWindowViewModel : ViewModelBase
             _paintedLocations[provinceId] = info;
         }
         ActiveProvinceInfo = info;
-        //TODO: fill in the static map with the new values
 
     }
     
@@ -187,7 +186,6 @@ public partial class MainWindowViewModel : ViewModelBase
             _paintedLocations[provinceId] = info;
         }
         
-        //TODO: fill in the static map with the new values
     }
 
     private string GenerateRandomName()
@@ -300,8 +298,6 @@ public partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(nameBoxText)) return;
 
         ActiveProvinceInfo.Name = nameBoxText.Trim();
-        
-        //TODO: correct the logic on updating the name since im using the maps to store provinces now.
         
         _paintedLocations[ActiveProvinceInfo.Id] = ActiveProvinceInfo;
     }

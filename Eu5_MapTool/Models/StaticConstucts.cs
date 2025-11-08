@@ -10,8 +10,6 @@ public static class StaticConstucts
     public const string COMMONPATH = "in_game/common/";
     public const string POPINFOPATH = "main_menu/setup/start/";
     
-    //TODO: these things implemented
-    
     // Hex is key name is value. used in Writing service
     public static Dictionary<string, string> HEXTONAMEMAP = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     
