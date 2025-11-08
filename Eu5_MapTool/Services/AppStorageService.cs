@@ -147,7 +147,10 @@ public class AppStorageService : IAppStorageInterface
 
                 // Create and store the province info
                 ProvinceInfo info = new ProvinceInfo(hex, name);
+                info.OldName = hex;
                 provinceInfos[hex] = info;
+                
+                StaticConstucts.HEXTONAMEMAP[hex] = name;
             }
 
             

@@ -174,6 +174,7 @@ namespace Eu5_MapTool.Views
                 Console.WriteLine(hex);
                 if (_activeTool == ToolType.Paint)
                 {
+                    UpdateProvinceInfoPanel(id);
                     if (_activePaintType == PaintType.LocationInfo)
                     {
                         ProvinceLocation loc = default;

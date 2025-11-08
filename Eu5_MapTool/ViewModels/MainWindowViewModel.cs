@@ -57,6 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? OnDoneLoadingMap;
     public Dictionary<string, ProvinceInfo> Provinces { get; private set; } // these are provinces loaded from cache
     public Dictionary<string, ProvinceInfo> _paintedLocations { get; private set;  } = new Dictionary<string, ProvinceInfo>();
+    
     private ProvinceInfo ActiveProvinceInfo { get; set; }
 
     public async void LoadProvinces()
@@ -116,28 +117,42 @@ public partial class MainWindowViewModel : ViewModelBase
     public void OnPaint(string provinceId, string topo, string vegetation, string climate, string religion, string culture, string rawMaterial)
     {
         ProvinceInfo info;
-        if(_paintedLocations.Keys.Contains(provinceId))
+        if (_paintedLocations.TryGetValue(provinceId, out ProvinceInfo existingInfo) || Provinces.TryGetValue(provinceId, out existingInfo))
         {
-            info = _paintedLocations[provinceId];
+            // Update existing info
+            info = existingInfo;
+            info.LocationInfo = new ProvinceLocation(
+                topo,
+                vegetation,
+                climate,
+                religion,
+                culture,
+                rawMaterial,
+                info.LocationInfo.NaturalHarborSuitability
+            );
+            _paintedLocations[provinceId] = info;
         }
         else
         {
-            string name = Provinces.ContainsKey(provinceId) ? Provinces[provinceId].Name : GenerateRandomName();
-            info = new ProvinceInfo(name, provinceId);
+            // Create new info
+            string randomName = GenerateRandomName();
+            info = new ProvinceInfo(randomName, provinceId)
+            {
+                LocationInfo = new ProvinceLocation(
+                    topo,
+                    vegetation,
+                    climate,
+                    religion,
+                    culture,
+                    rawMaterial,
+                    "0.00"
+                )
+            };
+            _paintedLocations[provinceId] = info;
         }
-
-        info.LocationInfo = new ProvinceLocation()
-        {
-            Topography = topo,
-            Vegetation = vegetation,
-            Climate = climate,
-            Religion = religion,
-            Culture = culture,
-            RawMaterial = rawMaterial
-        };
-
-        _paintedLocations[provinceId] = info;
         ActiveProvinceInfo = info;
+        //TODO: fill in the static map with the new values
+
     }
     
     public void OnPaintPop(string provinceId, List<PopDef> pops)
@@ -145,27 +160,34 @@ public partial class MainWindowViewModel : ViewModelBase
         provinceId = provinceId.Replace("#", "").Trim();
         
         ProvinceInfo info;
-
-        pops = MergePopUpdates(pops);
         
-        if(_paintedLocations.Keys.Contains(provinceId))
+        if (_paintedLocations.TryGetValue(provinceId, out ProvinceInfo existingInfo) || Provinces.TryGetValue(provinceId, out existingInfo))
         {
-            info = _paintedLocations[provinceId];
+            // Update existing info
+            info = existingInfo;
+            foreach (var pop in pops)
+            {
+                info.PopInfo.Pops.Add(pop);
+            }
+            var updatingpops = MergePopUpdates(info.PopInfo.Pops);
+            info.PopInfo.Pops = updatingpops;
+            _paintedLocations[provinceId] = info;
         }
         else
         {
-            string name = Provinces.ContainsKey(provinceId) ? Provinces[provinceId].Name : GenerateRandomName();
-            info = new ProvinceInfo(name, provinceId);
+            // Create new info
+            string randomName = GenerateRandomName();
+            info = new ProvinceInfo(randomName, provinceId)
+            {
+                PopInfo = new ProvincePopInfo
+                {
+                    Pops = pops
+                }
+            };
+            _paintedLocations[provinceId] = info;
         }
-
-        info.PopInfo = new ProvincePopInfo()
-        {
-            Pops = pops
-        };
         
-
-        _paintedLocations[provinceId] = info;
-        ActiveProvinceInfo = info;
+        //TODO: fill in the static map with the new values
     }
 
     private string GenerateRandomName()
@@ -243,40 +265,31 @@ public partial class MainWindowViewModel : ViewModelBase
     // --------- file writing ---------    
     public async Task WriteChanges()
     {
-        Console.WriteLine($"Writing {_paintedLocations.Count} painted locations...");   
-        
-        Dictionary<string, ProvinceLocation> locationQueue = new Dictionary<string, ProvinceLocation>();
+        Console.WriteLine($"Writing {_paintedLocations.Count} painted locations...");
+
         List<(string, string)> locMap = new List<(string, string)>();
-        Dictionary<string, ProvincePopInfo> popQueue = new Dictionary<string, ProvincePopInfo>();
-        
+        List<ProvinceInfo> infos = new();
+        Dictionary<string, ProvinceInfo> locations = new();
         foreach (var kvp in _paintedLocations)
         {
-            string provinceId = kvp.Value.Name; // format requires province name as id
+            string provinceId = kvp.Value.Id; // format requires province name as id
+            string provinceName = kvp.Value.Name;
             ProvinceInfo info = kvp.Value;
-
-            var locInfo = info.LocationInfo; 
-            if(!new[] { locInfo.Topography, locInfo.Vegetation, locInfo.Climate, locInfo.Culture, locInfo.Religion, locInfo.RawMaterial }.All(string.IsNullOrWhiteSpace))
-                locationQueue[provinceId] = locInfo;
             
-
-            if (kvp.Value.PopInfo != null)
-            {
-                ProvincePopInfo popInfo = new ProvincePopInfo();
-                popInfo.Pops = kvp.Value.PopInfo.Pops;
-                popQueue[provinceId] = popInfo;
-            }
+            infos.Add(kvp.Value);
             
-           
+            locations[provinceName] = info;
+            
             locMap.Add((info.Id, info.Name));
         }
+       
+        Dictionary<string, ProvinceInfo> poplocations = new(locations);
 
         await _writerService.WriteLocationMapAsync(locMap);
         
-        if(locationQueue.Count > 0)
-            await _writerService.WriteLocationInfoAsync(locationQueue);
-
-        if(popQueue.Count > 0) 
-            await _writerService.WriteProvincePopInfoAsync(popQueue);
+        await _writerService.WriteLocationInfoAsync(locations);
+        
+        await _writerService.WriteProvincePopInfoAsync(poplocations);
         
         _paintedLocations.Clear();
     }
@@ -287,6 +300,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(nameBoxText)) return;
 
         ActiveProvinceInfo.Name = nameBoxText.Trim();
+        
+        //TODO: correct the logic on updating the name since im using the maps to store provinces now.
         
         _paintedLocations[ActiveProvinceInfo.Id] = ActiveProvinceInfo;
     }
