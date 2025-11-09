@@ -6,7 +6,7 @@ Over a thousand locations..... heck probably even quintuple that. That is going 
 the app uses folder names to read and write. 
 - the files in common/* are retrieved dynamically, it'll grab the top most file.
 - not all folders in common/ need to be present. just make sure at least one of the two directories have an instance. 
-- the file for the location-pop definition just requires the word 'pop' (no capitals) to be present in the name. but i'll change this when the game releases.
+- the file for the name-id definition is read in map_data/named-locations/ but only the top file is read and written
 
 ## How to use
 Upon starting the app youre prompted with two fields, one for the base game and one for your mod. Use the browse button to open a file explorer and select the root of your project folders.
@@ -39,8 +39,7 @@ Not available right now.
 Download the Zip, extract it. use the .exe to run
 
 ## Notes / Known bugs
-- Removing an instance in a named_locations/ file whilst they still have data in other files will crash the program.
-- Painting Pop info whilst there no Location info present yields weird results. to fix this. paint the province with any Location info data and write it. selecting it again should present all data
+- ???
 
 Please contact me on discord or create an Issue for any bugs. Provide me with the steps you took to encounter it and i'll see it fixed.
 
