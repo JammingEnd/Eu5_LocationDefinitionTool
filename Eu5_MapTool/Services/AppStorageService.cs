@@ -39,12 +39,12 @@ public class AppStorageService : IAppStorageInterface
                 string line = mapLines.Dequeue();
                 int equalIndex = line.IndexOf('=');
                 if (equalIndex < 0) continue;
-                
+
                 string name = line[..equalIndex].Trim();
                 string hex = line[(equalIndex + 1)..].Trim();
-                
-                ProvinceInfo info = new ProvinceInfo(hex, name);
-                
+
+                ProvinceInfo info = new ProvinceInfo(name, hex);
+
                 provinceInfos[hex] = info;
             }   
             
@@ -129,27 +129,27 @@ public class AppStorageService : IAppStorageInterface
                 // Skip empty lines or comment/separator lines
                 if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#") || line.StartsWith("####"))
                     continue;
-                
+
                 int commentIndex = line.IndexOf('#');
                 if (commentIndex >= 0)
                     line = line[..commentIndex].Trim();
-                
+
                 int equalIndex = line.IndexOf('=');
                 if (equalIndex < 0)
                     continue;
-                
-                string hex = line[..equalIndex].Trim();
-                string name = line[(equalIndex + 1)..].Trim();
+
+                string name = line[..equalIndex].Trim();
+                string hex = line[(equalIndex + 1)..].Trim();
 
                 // Skip if either side is empty
                 if (string.IsNullOrEmpty(hex) || string.IsNullOrEmpty(name))
                     continue;
 
                 // Create and store the province info
-                ProvinceInfo info = new ProvinceInfo(hex, name);
-                info.OldName = hex;
+                ProvinceInfo info = new ProvinceInfo(name, hex);
+                info.OldName = name;
                 provinceInfos[hex] = info;
-                
+
                 StaticConstucts.HEXTONAMEMAP[hex] = name;
             }
 
@@ -229,20 +229,8 @@ public class AppStorageService : IAppStorageInterface
         }
         
         Console.WriteLine("Modded Locations loaded: " + provinceInfos.Count + " entries.");
-        
-        // its sucks that i have to do this  
-        Dictionary<string, ProvinceInfo> finalProvinceInfos = new();
-        
-        foreach (var kvp in provinceInfos)
-        {
-            if (kvp.Key == "hoorn")
-            {
-                Console.WriteLine("googoogaaga");
-            }
-            finalProvinceInfos[kvp.Value.Id] = kvp.Value;
-        }
-        
-        return finalProvinceInfos;
+
+        return provinceInfos;
     }
 
     public async Task<Bitmap> LoadMapImageAsync()

@@ -44,7 +44,7 @@ public class ProvinceRepository : IRepository<ProvinceInfo, string>
     }
 
     /// <summary>
-    /// Load all provinces from base game and modded files.
+    /// Load all provinces from modded files only.
     /// This should be called during application startup.
     /// Uses parsers directly to read files.
     /// </summary>
@@ -54,16 +54,7 @@ public class ProvinceRepository : IRepository<ProvinceInfo, string>
 
         Console.WriteLine("Loading provinces using parsers...");
 
-        // Load base game provinces
-        var baseGameProvinces = await LoadProvincesFromDirectory(_baseGameDirectory, includePopInfo: false);
-        Console.WriteLine($"Loaded {baseGameProvinces.Count} base game provinces");
-
-        foreach (var kvp in baseGameProvinces)
-        {
-            _provinces[kvp.Key] = kvp.Value;
-        }
-
-        // Load modded provinces (will override base game where applicable)
+        // Load modded provinces only (base game locations are skipped)
         var moddedProvinces = await LoadProvincesFromDirectory(_modsDirectory, includePopInfo: true);
         Console.WriteLine($"Loaded {moddedProvinces.Count} modded provinces");
 

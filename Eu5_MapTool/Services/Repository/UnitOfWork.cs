@@ -52,6 +52,12 @@ public class UnitOfWork : IUnitOfWork
                 // Save via repository
                 await _provinceRepository.SaveAsync(changedProvinces);
 
+                // Clear OldName for all saved provinces since they're now persisted with their new names
+                foreach (var province in changedProvinces.Values)
+                {
+                    province.OldName = null;
+                }
+
                 // Commit transaction
                 _transactionManager.CommitTransaction();
             }
@@ -69,6 +75,12 @@ public class UnitOfWork : IUnitOfWork
         {
             // No transaction support - just save directly
             await _provinceRepository.SaveAsync(changedProvinces);
+
+            // Clear OldName for all saved provinces since they're now persisted with their new names
+            foreach (var province in changedProvinces.Values)
+            {
+                province.OldName = null;
+            }
         }
 
         // Accept changes (mark all as Unchanged)
@@ -88,6 +100,11 @@ public class UnitOfWork : IUnitOfWork
     public void Clear()
     {
         _changeTracker.Clear();
+    }
+
+    public Dictionary<string, ProvinceInfo> GetChangedProvinces()
+    {
+        return _changeTracker.GetChangedAsDictionary();
     }
 
     public void Dispose()

@@ -84,8 +84,8 @@ public class ProvinceMapper
         // Also check for locations that might not have names yet
         foreach (var kvp in locationData)
         {
-            string hexId = kvp.Key;
-            if (!result.ContainsKey(hexId))
+            string hexId = hexToNameMap[kvp.Key];
+            if (result.ContainsKey(hexId))
             {
                 // This location has data but no name mapping
                 var province = MapToEntity(hexId, hexId, kvp.Value, null);

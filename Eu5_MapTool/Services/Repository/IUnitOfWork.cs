@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eu5_MapTool.Models;
 
@@ -42,4 +43,10 @@ public interface IUnitOfWork : IDisposable
     /// Clear all tracked changes without saving.
     /// </summary>
     void Clear();
+
+    /// <summary>
+    /// Get all provinces that have been changed (Added, Modified, or Deleted).
+    /// Returns a dictionary of changed provinces keyed by province ID.
+    /// </summary>
+    Dictionary<string, ProvinceInfo> GetChangedProvinces();
 }

@@ -68,14 +68,8 @@ public partial class MainWindowViewModel : ViewModelBase
             if (_unitOfWork == null || !_unitOfWork.HasChanges)
                 return new Dictionary<string, ProvinceInfo>();
 
-            // Return modified provinces from change tracker
-            // Note: This is a compatibility shim. New code should use _unitOfWork directly.
-            return Provinces.Where(kvp =>
-            {
-                // Check if this province has been modified in the unit of work
-                var province = _unitOfWork.Provinces.GetByIdAsync(kvp.Key).Result;
-                return province != null;
-            }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            // Return only changed provinces from the change tracker
+            return _unitOfWork.GetChangedProvinces();
         }
     }
 
@@ -121,7 +115,7 @@ public partial class MainWindowViewModel : ViewModelBase
     // --------- tool methods ---------
   
     
-    public async void OnSelect(string provinceId)
+    public async Task<ProvinceInfo> OnSelect(string provinceId)
     {
         ProvinceInfo? info = null;
 
@@ -137,10 +131,11 @@ public partial class MainWindowViewModel : ViewModelBase
             info = Provinces[provinceId];
         }
 
-        if (info == null) return;
+        if (info == null) return null;
 
         ActiveProvinceInfo = info;
         UpdateProvinceInfoDisplay(info);
+        return info;
     }
 
     public async void OnPaint(string provinceId, string topo, string vegetation, string climate, string religion, string culture, string rawMaterial)
@@ -332,6 +327,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Culture = $"Culture: {info.LocationInfo.Culture}";
         RawMaterial = $"Raw Material: {info.LocationInfo.RawMaterial}";
         HarborSuitability = $"Harbor Suitability: {info.LocationInfo.NaturalHarborSuitability}";
+        
     }
     // --- Pop info ---
     public string ProvinceName = "";
@@ -390,10 +386,12 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Store old name for tracking rename
-        if (string.IsNullOrEmpty(info.OldName) || info.OldName == info.Name)
+        // Store the CURRENT name as OldName for tracking the rename
+        // This tracks what name exists in the files RIGHT NOW
+        // After save, OldName will be cleared since files will match the new name
+        if (string.IsNullOrEmpty(info.OldName))
         {
-            info.OldName = info.Name; // Preserve original name for file updates
+            info.OldName = info.Name;
         }
 
         // Update the province name

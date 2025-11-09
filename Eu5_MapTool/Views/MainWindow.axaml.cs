@@ -233,7 +233,6 @@ namespace Eu5_MapTool.Views
 
                 if (_activeTool == ToolType.Select)
                 {
-                    _vm.OnSelect(id);
                     UpdateProvinceInfoPanel(id);
                 }
             }
@@ -331,27 +330,29 @@ namespace Eu5_MapTool.Views
             PopInfoBlock.Children.Clear();
 
             // Use ViewModel's OnSelect method to update display
-            _vm.OnSelect(hex);
+            // This will update all the bound ObservableProperties
+            _vm.OnSelect(hex).Wait();
 
-            // Get province info for additional UI updates
+            // Get province info for additional UI updates that can't be bound
             if (_vm._paintedLocations.TryGetValue(hex, out var provInfo) || _vm.Provinces.TryGetValue(hex, out provInfo))
             {
-                // Update name box
+                // Update name box (not bound to ViewModel)
                 NameBox.Text = provInfo.Name;
 
-                // Now with ObservableProperty, bindings should work automatically
-                // But we still manually update for now to ensure compatibility
-                InfoId.Text = provInfo.Id;
-                InfoTopo.Text = provInfo.LocationInfo.Topography;
-                InfoVeg.Text = provInfo.LocationInfo.Vegetation;
-                InfoClimate.Text = provInfo.LocationInfo.Climate;
-                InfoReli.Text = provInfo.LocationInfo.Religion;
-                InfoCulture.Text = provInfo.LocationInfo.Culture;
-                InfoRgo.Text = provInfo.LocationInfo.RawMaterial;
-                InfoHarbor.Text = provInfo.LocationInfo.NaturalHarborSuitability;
-                
-                // pop info generation
-                if (provInfo.PopInfo != null)
+                // Use provInfo (the actual province data) instead of selectedInfo
+                var real_info = provInfo.LocationInfo;
+
+                InfoId .Text = $"ID: {hex}";
+                InfoTopo.Text = $"Topography: {real_info.Topography}";
+                InfoVeg.Text = $"Vegetation: {real_info.Vegetation}";
+                InfoClimate.Text = $"Climate: {real_info.Climate}";
+                InfoReli.Text = $"Religion: {real_info.Religion}";
+                InfoCulture.Text = $"Culture: {real_info.Culture}";
+                InfoRgo.Text = $"Raw Material: {real_info.RawMaterial}";
+                InfoHarbor.Text = $"Natural Harbor Suitability: {real_info.NaturalHarborSuitability}";
+
+                // Generate pop info UI dynamically (can't be done via binding)
+                if (provInfo.PopInfo != null && provInfo.PopInfo.Pops != null)
                 {
                     foreach (var popInfo in provInfo.PopInfo.Pops)
                     {
@@ -366,17 +367,9 @@ namespace Eu5_MapTool.Views
             }
             else
             {
-                InfoId.Text = hex + " (not found in files)";
-                InfoTopo.Text = "N/A";
-                InfoVeg.Text = "N/A";
-                InfoClimate.Text = "N/A";
-                InfoReli.Text = "N/A";
-                InfoCulture.Text = "N/A";
-                InfoRgo.Text = "N/A";
+                // Province not found - update name box only
+                NameBox.Text = hex + " (not found in files)";
             }
-            
-           
-            
         }
 
         private void UpdateTransform()
