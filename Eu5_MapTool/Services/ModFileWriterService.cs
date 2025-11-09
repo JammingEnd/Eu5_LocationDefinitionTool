@@ -76,15 +76,16 @@ public class ModFileWriterService : IModFileWriter
         throw new InvalidOperationException("Write directory is not set.");
 
     string filePath = Path.Combine(_modsDirectory, StaticConstucts.MAPDATAPATH, "location_templates.txt");
-    string outputLines = "";
-    
-    
+
+
     // format is: ___YMJrkTYLkr = { topography = flatland vegetation = jungle climate = tropical religion = bon culture = dakelh_culture raw_material = horses natural_harbor_suitability =  }
-    // 
+    //
     if (File.Exists(filePath))
     {
         var lines = await File.ReadAllLinesAsync(filePath);
         var outputLinesList = new List<string>();
+        var processedLocations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var line in lines)
         {
             string currentLine = line;
@@ -93,28 +94,47 @@ public class ModFileWriterService : IModFileWriter
                 outputLinesList.Add(currentLine);
                 continue;
             };
-            
-            string name = line.Split('=')[0].Trim();
-            if (locationInfos.TryGetValue(name, out ProvinceInfo info))
+
+            string existingName = line.Split('=')[0].Trim();
+
+            // Find matching entry by checking both current name and OldName
+            ProvinceInfo matchingInfo = null;
+            foreach (var kvp in locationInfos)
             {
-                currentLine = ReplaceName(line, info.Name);
-                currentLine = ReplaceValue(currentLine, "topography", info.LocationInfo.Topography);
-                currentLine = ReplaceValue(currentLine, "climate", info.LocationInfo.Climate);
-                currentLine = ReplaceValue(currentLine, "vegetation", info.LocationInfo.Vegetation);
-                currentLine = ReplaceValue(currentLine, "religion", info.LocationInfo.Religion);
-                currentLine = ReplaceValue(currentLine, "culture", info.LocationInfo.Culture);
-                currentLine = ReplaceValue(currentLine, "raw_material", info.LocationInfo.RawMaterial);
-                currentLine = ReplaceValue(currentLine, "natural_harbor_suitability", info.LocationInfo.NaturalHarborSuitability);
+                var info = kvp.Value;
+                string oldName = info.OldName ?? info.Name;
+                if (existingName.Equals(oldName, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchingInfo = info;
+                    break;
+                }
+            }
+
+            if (matchingInfo != null)
+            {
+                // Update the entry with new name and values
+                currentLine = ReplaceName(line, matchingInfo.Name);
+                currentLine = ReplaceValue(currentLine, "topography", matchingInfo.LocationInfo.Topography);
+                currentLine = ReplaceValue(currentLine, "climate", matchingInfo.LocationInfo.Climate);
+                currentLine = ReplaceValue(currentLine, "vegetation", matchingInfo.LocationInfo.Vegetation);
+                currentLine = ReplaceValue(currentLine, "religion", matchingInfo.LocationInfo.Religion);
+                currentLine = ReplaceValue(currentLine, "culture", matchingInfo.LocationInfo.Culture);
+                currentLine = ReplaceValue(currentLine, "raw_material", matchingInfo.LocationInfo.RawMaterial);
+                currentLine = ReplaceValue(currentLine, "natural_harbor_suitability", matchingInfo.LocationInfo.NaturalHarborSuitability);
                 outputLinesList.Add(currentLine);
-                locationInfos.Remove(info.Name);
+                processedLocations.Add(matchingInfo.Name);
                 continue;
             }
+
             outputLinesList.Add(currentLine);
-            
         }
 
+        // Add any new locations that weren't in the file
         foreach (var location in locationInfos)
         {
+            if (processedLocations.Contains(location.Value.Name))
+                continue;
+
             var info = location.Value;
             string newline = $"{location.Value.Name} = " + "{ " +
                              $"topography = {info.LocationInfo.Topography} " +
@@ -124,11 +144,10 @@ public class ModFileWriterService : IModFileWriter
                              $"culture = {info.LocationInfo.Culture} " +
                              $"raw_material = {info.LocationInfo.RawMaterial} " +
                              $"natural_harbor_suitability = {info.LocationInfo.NaturalHarborSuitability} " +
-                             "}";       
+                             "}";
             outputLinesList.Add(newline);
-            
         }
-        
+
         await File.WriteAllLinesAsync(filePath, outputLinesList);
     }
 }

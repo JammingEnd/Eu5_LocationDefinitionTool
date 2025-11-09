@@ -178,6 +178,15 @@ public partial class MainWindowViewModel : ViewModelBase
             string randomName = GenerateRandomName();
             info = new ProvinceInfo(randomName, provinceId)
             {
+                LocationInfo = new ProvinceLocation(
+                    "NONE",
+                    "NONE",
+                    "NONE",
+                    "NONE",
+                    "NONE",
+                    "NONE",
+                    "0.00"),
+                
                 PopInfo = new ProvincePopInfo
                 {
                     Pops = pops
@@ -297,8 +306,14 @@ public partial class MainWindowViewModel : ViewModelBase
         if (ActiveProvinceInfo == null) return;
         if (string.IsNullOrWhiteSpace(nameBoxText)) return;
 
+        // Preserve the original name if not already set
+        if (string.IsNullOrEmpty(ActiveProvinceInfo.OldName))
+        {
+            ActiveProvinceInfo.OldName = ActiveProvinceInfo.Name;
+        }
+
         ActiveProvinceInfo.Name = nameBoxText.Trim();
-        
+
         _paintedLocations[ActiveProvinceInfo.Id] = ActiveProvinceInfo;
     }
 }

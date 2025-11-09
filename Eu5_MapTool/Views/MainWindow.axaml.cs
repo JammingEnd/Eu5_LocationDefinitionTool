@@ -184,17 +184,17 @@ namespace Eu5_MapTool.Views
                             
                         }
                         string topography = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Topography")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.Topography).FirstOrDefault() ?? _vm.Cache.Topographies.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Topography).FirstOrDefault() ?? loc.Topography ?? _vm.Cache.Topographies.GetCombined().First();
                         string vegetation = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Vegetation")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.Vegetation).FirstOrDefault() ?? _vm.Cache.Vegetations.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Vegetation).FirstOrDefault() ?? loc.Vegetation ?? _vm.Cache.Vegetations.GetCombined().First();
                         string climate = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Climate")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.Climate).FirstOrDefault() ?? _vm.Cache.Climates.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Climate).FirstOrDefault() ?? loc.Climate ?? _vm.Cache.Climates.GetCombined().First();
                         string religion = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Religion")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.Religion).FirstOrDefault() ?? _vm.Cache.Religions.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Religion).FirstOrDefault() ?? loc.Religion ?? _vm.Cache.Religions.GetCombined().First();
                         string culture = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Culture")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.Culture).FirstOrDefault() ?? _vm.Cache.Cultures.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.Culture).FirstOrDefault() ?? loc.Culture ?? _vm.Cache.Cultures.GetCombined().First();
                         string rawMaterial = _toolLocationSettings.Where(x => x.Key.SelectedItem as string == "Raw Material")
-                            .Select(x => x.Value.SelectedItem as string ?? loc.RawMaterial).FirstOrDefault() ?? _vm.Cache.RawMaterials.GetCombined().First();
+                            .Select(x => x.Value.SelectedItem as string ?? loc.RawMaterial).FirstOrDefault() ?? loc.RawMaterial ?? _vm.Cache.RawMaterials.GetCombined().First();
                         
                         _vm.OnPaint(id, topography, vegetation, climate, religion, culture, rawMaterial);
                         UpdateProvinceInfoPanel(id);
