@@ -35,12 +35,7 @@ namespace Eu5_MapTool.ViewModels
         [RelayCommand]
         private void SaveAndContinue()
         {
-
-            
-            
-            
-            _mainVM._writerService.SetWriteDirectory(DirectoryB);
-            
+            // No longer needed - directory paths are passed directly to ProvinceRepository
         }
 
         partial void OnDirectoryAChanged(string? value)

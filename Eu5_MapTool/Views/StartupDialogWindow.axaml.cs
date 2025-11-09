@@ -2,14 +2,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
 using Eu5_MapTool.cache;
 using Eu5_MapTool.Models;
 using Eu5_MapTool.Services;
+using Eu5_MapTool.Services.Repository;
 using Eu5_MapTool.Settings;
 using Eu5_MapTool.ViewModels;
 
@@ -19,9 +22,8 @@ namespace Eu5_MapTool.Views
     {
         public readonly StartupDialogViewModel _vm;
         private readonly MainWindowViewModel _mainVM;
-        private readonly AppStorageService _storageService;
         private Settings.Settings _settings;
-        
+
         public StartupDialogWindow(MainWindowViewModel mainWindowViewModel)
         {
             InitializeComponent();
@@ -30,8 +32,6 @@ namespace Eu5_MapTool.Views
             _mainVM = mainWindowViewModel;
             LoadSettings();
 
-            _storageService = new AppStorageService();
-            
             Closing += OnWindowClosing;
         }
 
@@ -110,56 +110,39 @@ namespace Eu5_MapTool.Views
             if (_vm.WasAccepted && !string.IsNullOrWhiteSpace(_vm.DirectoryA) && !string.IsNullOrWhiteSpace(_vm.DirectoryB))
             {
                 Console.WriteLine("Loading directories:");
-                _storageService.SetDirectories(_vm.DirectoryA!, _vm.DirectoryB!);
 
-
-                CulturesC cache_cultures = new CulturesC(
-                    await _storageService.LoadCultureListAsync(_vm.DirectoryA),
-                    await _storageService.LoadCultureListAsync(_vm.DirectoryB)
-                );
-                ReligionC cache_religions = new ReligionC(
-                    await _storageService.LoadReligionListAsync(_vm.DirectoryA),
-                    await _storageService.LoadReligionListAsync(_vm.DirectoryB)
-                );
-                TopographyC cache_topographies = new TopographyC(
-                    await _storageService.LoadTopographyListAsync(_vm.DirectoryA),
-                    await _storageService.LoadTopographyListAsync(_vm.DirectoryB)
-                );
-                ClimateC cache_climates = new ClimateC(
-                    await _storageService.LoadClimateListAsync(_vm.DirectoryA),
-                    await _storageService.LoadClimateListAsync(_vm.DirectoryB)
-                );
-                VegetationC cache_vegetations = new VegetationC(
-                    await _storageService.LoadVegetationListAsync(_vm.DirectoryA),
-                    await _storageService.LoadVegetationListAsync(_vm.DirectoryB)
-                );
-                RawMaterialsC cache_rawMaterials = new RawMaterialsC(
-                    await _storageService.LoadRawMaterialListAsync(_vm.DirectoryA),
-                    await _storageService.LoadRawMaterialListAsync(_vm.DirectoryB)
-                );
-                PopTypesC cache_popTypes = new PopTypesC(
-                    await _storageService.LoadPopTypeListAsync(_vm.DirectoryA),
-                    await _storageService.LoadPopTypeListAsync(_vm.DirectoryB)
-                );
-                
-                Cache cache = new Cache(
-                    cache_religions,
-                    cache_cultures,
-                    cache_topographies,
-                    cache_vegetations,
-                    cache_climates,
-                    cache_rawMaterials,
-                    cache_popTypes
-                    );
-                
+                // ======== Load Cache using CacheLoaderService ========
+                var cacheLoader = new CacheLoaderService();
+                Cache cache = await cacheLoader.LoadCacheAsync(_vm.DirectoryA!, _vm.DirectoryB!);
                 _mainVM.SetCache(cache);
 
-                Dictionary<string, ProvinceInfo> infos = await _storageService.LoadModdedAsync();
-                
-                _mainVM.LoadProvinces(infos);
-                
-                _mainVM.LoadMapImage(_storageService);
-                
+                // ======== Load Map Image ========
+                _mainVM.LoadMapImage(_vm.DirectoryB!);
+
+                // ======== Initialize ORM (Unit of Work) ========
+                Console.WriteLine("Initializing ORM (Unit of Work) with direct parser usage...");
+
+                // Create repository with directory paths (uses parsers directly, no old services!)
+                var provinceRepository = new ProvinceRepository(_vm.DirectoryA, _vm.DirectoryB);
+                await provinceRepository.LoadAsync();
+
+                // Create transaction manager for backup/rollback support
+                string backupDir = Path.Combine(Path.GetTempPath(), "Eu5MapTool_Backup");
+                var transactionManager = new TransactionManager(backupDir);
+
+                // Create Unit of Work
+                var unitOfWork = new UnitOfWork(provinceRepository, transactionManager);
+
+                // Initialize the ViewModel with Unit of Work
+                _mainVM.InitializeUnitOfWork(unitOfWork);
+
+                // Populate ViewModel's Provinces dictionary from repository
+                var allProvinces = await unitOfWork.Provinces.GetAllAsync();
+                _mainVM.LoadProvinces(allProvinces.ToDictionary(p => p.Id, p => p));
+
+                Console.WriteLine($"✓ ORM initialized with direct parsers. No dependency on old services!");
+                // ===============================================
+
                 this.Close();
             }
         }

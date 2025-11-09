@@ -329,28 +329,26 @@ namespace Eu5_MapTool.Views
         private void UpdateProvinceInfoPanel(string hex)
         {
             PopInfoBlock.Children.Clear();
+
+            // Use ViewModel's OnSelect method to update display
+            _vm.OnSelect(hex);
+
+            // Get province info for additional UI updates
             if (_vm._paintedLocations.TryGetValue(hex, out var provInfo) || _vm.Provinces.TryGetValue(hex, out provInfo))
             {
-                _vm.ProvinceId = provInfo.Id;
-                _vm.Topography = provInfo.LocationInfo.Topography;
-                _vm.Vegetation = provInfo.LocationInfo.Vegetation;
-                _vm.Climate = provInfo.LocationInfo.Climate;
-                _vm.Religion = provInfo.LocationInfo.Religion;
-                _vm.Culture = provInfo.LocationInfo.Culture;
-                _vm.RawMaterial = provInfo.LocationInfo.RawMaterial;
-                _vm.HarborSuitability = provInfo.LocationInfo.NaturalHarborSuitability;
-                _vm.FormatLocationInfo();
-
-                // why does it not update bindings automatically!! grrrrr
-                InfoId.Text = _vm.ProvinceId;
+                // Update name box
                 NameBox.Text = provInfo.Name;
-                InfoTopo.Text = _vm.Topography;
-                InfoVeg.Text = _vm.Vegetation;
-                InfoClimate.Text = _vm.Climate;
-                InfoReli.Text = _vm.Religion;
-                InfoCulture.Text = _vm.Culture;
-                InfoRgo.Text = _vm.RawMaterial;
-                InfoHarbor.Text = _vm.HarborSuitability;
+
+                // Now with ObservableProperty, bindings should work automatically
+                // But we still manually update for now to ensure compatibility
+                InfoId.Text = provInfo.Id;
+                InfoTopo.Text = provInfo.LocationInfo.Topography;
+                InfoVeg.Text = provInfo.LocationInfo.Vegetation;
+                InfoClimate.Text = provInfo.LocationInfo.Climate;
+                InfoReli.Text = provInfo.LocationInfo.Religion;
+                InfoCulture.Text = provInfo.LocationInfo.Culture;
+                InfoRgo.Text = provInfo.LocationInfo.RawMaterial;
+                InfoHarbor.Text = provInfo.LocationInfo.NaturalHarborSuitability;
                 
                 // pop info generation
                 if (provInfo.PopInfo != null)

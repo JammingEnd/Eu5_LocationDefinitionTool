@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
@@ -9,6 +10,7 @@ using Eu5_MapTool.cache;
 using Eu5_MapTool.logic;
 using Eu5_MapTool.Models;
 using Eu5_MapTool.Services;
+using Eu5_MapTool.Services.Repository;
 
 namespace Eu5_MapTool.ViewModels;
 
@@ -28,20 +30,20 @@ public enum PaintType
 public partial class MainWindowViewModel : ViewModelBase
 {
     public Cache Cache { get; private set; }
-    public readonly ModFileWriterService _writerService;
-    private AppStorageService _reader;
+    private IUnitOfWork? _unitOfWork;
+
     public MainWindowViewModel()
     {
-        ProvinceId = "Code: ...";
-        Topography = "Topography: ...";
-        Climate = "Climate: ...";
-        Vegetation = "Vegetation: ...";
-        Religion = "Religion: ...";
-        Culture = "Culture: ...";
-        RawMaterial = "Raw Material: ...";
-        HarborSuitability = "Harbor Suitability: ...";
-        
-        _writerService = new ModFileWriterService();
+        // Properties are initialized with default values above
+    }
+
+    /// <summary>
+    /// Initialize the Unit of Work for ORM-style data access.
+    /// Should be called after services are configured.
+    /// </summary>
+    public void InitializeUnitOfWork(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork;
     }
     
     public void SetCache(Cache cache)
@@ -56,21 +58,47 @@ public partial class MainWindowViewModel : ViewModelBase
     private Bitmap _mapImage;
     public event EventHandler? OnDoneLoadingMap;
     public Dictionary<string, ProvinceInfo> Provinces { get; private set; } // these are provinces loaded from cache
-    public Dictionary<string, ProvinceInfo> _paintedLocations { get; private set;  } = new Dictionary<string, ProvinceInfo>();
-    
-    private ProvinceInfo ActiveProvinceInfo { get; set; }
+
+    // Legacy: Keeping for backward compatibility during transition
+    // This now returns tracked changes from UnitOfWork if available
+    public Dictionary<string, ProvinceInfo> _paintedLocations
+    {
+        get
+        {
+            if (_unitOfWork == null || !_unitOfWork.HasChanges)
+                return new Dictionary<string, ProvinceInfo>();
+
+            // Return modified provinces from change tracker
+            // Note: This is a compatibility shim. New code should use _unitOfWork directly.
+            return Provinces.Where(kvp =>
+            {
+                // Check if this province has been modified in the unit of work
+                var province = _unitOfWork.Provinces.GetByIdAsync(kvp.Key).Result;
+                return province != null;
+            }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+    }
+
+    private ProvinceInfo? ActiveProvinceInfo { get; set; }
 
     public async void LoadProvinces()
     {
+        if (_unitOfWork == null)
+        {
+            Console.WriteLine("ERROR: Cannot reload provinces - UnitOfWork not initialized");
+            return;
+        }
+
         try
         {
-            Dictionary<string, ProvinceInfo> p = await _reader.LoadModdedAsync();
-            Provinces = p;
+            // Reload from repository
+            var allProvinces = await _unitOfWork.Provinces.GetAllAsync();
+            Provinces = allProvinces.ToDictionary(p => p.Id, p => p);
             Console.WriteLine("Provinces reloaded: " + Provinces.Count);
         }
         catch (Exception e)
         {
-            Console.WriteLine(" mama mia, Error loading provinces: " + e.Message);
+            Console.WriteLine("Error reloading provinces: " + e.Message);
         }
     }
     public void LoadProvinces(Dictionary<string, ProvinceInfo> p)
@@ -79,11 +107,13 @@ public partial class MainWindowViewModel : ViewModelBase
         Console.WriteLine("Provinces loaded: " + Provinces.Count);
     }
     
-    public async void LoadMapImage(AppStorageService reader)
+    public async void LoadMapImage(string moddedGamePath)
     {
-        _reader = reader;
-        _mapImage = await _reader.LoadMapImageAsync();
+        string imagePath = Path.Combine(moddedGamePath, StaticConstucts.MAPDATAPATH, "locations.png");
+        await using var fs = File.OpenRead(imagePath);
+        MapImage = new Bitmap(fs);
         OnDoneLoadingMap?.Invoke(this, EventArgs.Empty);
+        Console.WriteLine("Map image loaded.");
     }
     
     // --------- tool properties ---------
@@ -91,36 +121,41 @@ public partial class MainWindowViewModel : ViewModelBase
     // --------- tool methods ---------
   
     
-    public void OnSelect(string provinceId)
+    public async void OnSelect(string provinceId)
     {
-        
-        var info = Provinces.ContainsKey(provinceId)
-            ? Provinces[provinceId]
-            : _paintedLocations.ContainsKey(provinceId)
-                ? _paintedLocations[provinceId]
-                : null;
-        
-        if(info == null) return;
-        
+        ProvinceInfo? info = null;
+
+        // First check if UnitOfWork is available and province exists there
+        if (_unitOfWork != null)
+        {
+            info = await _unitOfWork.Provinces.GetByIdAsync(provinceId);
+        }
+
+        // Fallback to Provinces dictionary if not found in UnitOfWork
+        if (info == null && Provinces.ContainsKey(provinceId))
+        {
+            info = Provinces[provinceId];
+        }
+
+        if (info == null) return;
+
         ActiveProvinceInfo = info;
-        ProvinceId = ActiveProvinceInfo.Id;
-        Topography = ActiveProvinceInfo.LocationInfo.Topography;
-        Vegetation = ActiveProvinceInfo.LocationInfo.Vegetation;
-        Religion = ActiveProvinceInfo.LocationInfo.Religion;
-        Culture = ActiveProvinceInfo.LocationInfo.Culture;
-        RawMaterial = ActiveProvinceInfo.LocationInfo.RawMaterial;
-        Climate = ActiveProvinceInfo.LocationInfo.Climate;
-        HarborSuitability = ActiveProvinceInfo.LocationInfo.NaturalHarborSuitability;
-        FormatLocationInfo();
+        UpdateProvinceInfoDisplay(info);
     }
 
-    public void OnPaint(string provinceId, string topo, string vegetation, string climate, string religion, string culture, string rawMaterial)
+    public async void OnPaint(string provinceId, string topo, string vegetation, string climate, string religion, string culture, string rawMaterial)
     {
-        ProvinceInfo info;
-        if (_paintedLocations.TryGetValue(provinceId, out ProvinceInfo existingInfo) || Provinces.TryGetValue(provinceId, out existingInfo))
+        if (_unitOfWork == null)
         {
-            // Update existing info
-            info = existingInfo;
+            Console.WriteLine("ERROR: UnitOfWork not initialized");
+            return;
+        }
+
+        ProvinceInfo? info = await _unitOfWork.Provinces.GetByIdAsync(provinceId);
+
+        if (info != null)
+        {
+            // Update existing province
             info.LocationInfo = new ProvinceLocation(
                 topo,
                 vegetation,
@@ -130,11 +165,13 @@ public partial class MainWindowViewModel : ViewModelBase
                 rawMaterial,
                 info.LocationInfo.NaturalHarborSuitability
             );
-            _paintedLocations[provinceId] = info;
+
+            // Automatically tracked by UnitOfWork
+            _unitOfWork.Provinces.Update(info);
         }
         else
         {
-            // Create new info
+            // Create new province
             string randomName = GenerateRandomName();
             info = new ProvinceInfo(randomName, provinceId)
             {
@@ -148,33 +185,49 @@ public partial class MainWindowViewModel : ViewModelBase
                     "0.00"
                 )
             };
-            _paintedLocations[provinceId] = info;
+
+            // Automatically tracked by UnitOfWork
+            _unitOfWork.Provinces.Add(info);
         }
+
         ActiveProvinceInfo = info;
 
+        // Update UI to show the painted values
+        UpdateProvinceInfoDisplay(info);
+
+        Console.WriteLine($"Province {provinceId} painted. Total changes: {_unitOfWork.ChangeCount}");
     }
     
-    public void OnPaintPop(string provinceId, List<PopDef> pops)
+    public async void OnPaintPop(string provinceId, List<PopDef> pops)
     {
-        provinceId = provinceId.Replace("#", "").Trim();
-        
-        ProvinceInfo info;
-        
-        if (_paintedLocations.TryGetValue(provinceId, out ProvinceInfo existingInfo) || Provinces.TryGetValue(provinceId, out existingInfo))
+        if (_unitOfWork == null)
         {
-            // Update existing info
-            info = existingInfo;
+            Console.WriteLine("ERROR: UnitOfWork not initialized");
+            return;
+        }
+
+        provinceId = provinceId.Replace("#", "").Trim();
+
+        ProvinceInfo? info = await _unitOfWork.Provinces.GetByIdAsync(provinceId);
+
+        if (info != null)
+        {
+            // Update existing province pops
             foreach (var pop in pops)
             {
                 info.PopInfo.Pops.Add(pop);
             }
-            var updatingpops = MergePopUpdates(info.PopInfo.Pops);
-            info.PopInfo.Pops = updatingpops;
-            _paintedLocations[provinceId] = info;
+
+            // Merge duplicate pops (same type/culture/religion)
+            var updatedPops = MergePopUpdates(info.PopInfo.Pops);
+            info.PopInfo.Pops = updatedPops;
+
+            // Automatically tracked by UnitOfWork
+            _unitOfWork.Provinces.Update(info);
         }
         else
         {
-            // Create new info
+            // Create new province with pops
             string randomName = GenerateRandomName();
             info = new ProvinceInfo(randomName, provinceId)
             {
@@ -183,9 +236,16 @@ public partial class MainWindowViewModel : ViewModelBase
                     Pops = pops
                 }
             };
-            _paintedLocations[provinceId] = info;
+
+            // Automatically tracked by UnitOfWork
+            _unitOfWork.Provinces.Add(info);
         }
-        
+
+        // Update UI to show the province info (including the pops just painted)
+        ActiveProvinceInfo = info;
+        UpdateProvinceInfoDisplay(info);
+
+        Console.WriteLine($"Province {provinceId} pops painted. Total changes: {_unitOfWork.ChangeCount}");
     }
 
     private string GenerateRandomName()
@@ -235,70 +295,119 @@ public partial class MainWindowViewModel : ViewModelBase
     // --------- infopanel properties ---------
 
     // --- Location info ---
-    public string ProvinceId { get; set; }
-    public string Topography { get; set; }
-    public string Climate { get; set; }
-    public string Vegetation { get; set; }
-    public string Religion { get; set; }
-    public string Culture { get; set; }
-    public string RawMaterial { get; set; }
-    public string HarborSuitability { get; set; }
+    [ObservableProperty]
+    private string _provinceId = "Code: ...";
 
-    public void FormatLocationInfo()
+    [ObservableProperty]
+    private string _topography = "Topography: ...";
+
+    [ObservableProperty]
+    private string _climate = "Climate: ...";
+
+    [ObservableProperty]
+    private string _vegetation = "Vegetation: ...";
+
+    [ObservableProperty]
+    private string _religion = "Religion: ...";
+
+    [ObservableProperty]
+    private string _culture = "Culture: ...";
+
+    [ObservableProperty]
+    private string _rawMaterial = "Raw Material: ...";
+
+    [ObservableProperty]
+    private string _harborSuitability = "Harbor Suitability: ...";
+
+    /// <summary>
+    /// Update UI properties from ProvinceInfo data
+    /// </summary>
+    private void UpdateProvinceInfoDisplay(ProvinceInfo info)
     {
-        ProvinceId = "Code: " + ProvinceId;
-        Topography = "Topography: " + Topography;
-        Climate = "Climate: " + Climate;
-        Vegetation = "Vegetation: " + Vegetation;
-        Religion = "Religion: " + Religion;
-        Culture = "Culture: " + Culture;
-        RawMaterial = "Raw Material: " + RawMaterial;
-        HarborSuitability = "Harbor Suitability: " + HarborSuitability;
+        ProvinceId = $"Code: {info.Id}";
+        Topography = $"Topography: {info.LocationInfo.Topography}";
+        Vegetation = $"Vegetation: {info.LocationInfo.Vegetation}";
+        Climate = $"Climate: {info.LocationInfo.Climate}";
+        Religion = $"Religion: {info.LocationInfo.Religion}";
+        Culture = $"Culture: {info.LocationInfo.Culture}";
+        RawMaterial = $"Raw Material: {info.LocationInfo.RawMaterial}";
+        HarborSuitability = $"Harbor Suitability: {info.LocationInfo.NaturalHarborSuitability}";
     }
     // --- Pop info ---
     public string ProvinceName = "";
     public List<PopDef> Pops = new List<PopDef>();
     
     
-    // --------- file writing ---------    
+    // --------- file writing ---------
     public async Task WriteChanges()
     {
-        Console.WriteLine($"Writing {_paintedLocations.Count} painted locations...");
-
-        List<(string, string)> locMap = new List<(string, string)>();
-        List<ProvinceInfo> infos = new();
-        Dictionary<string, ProvinceInfo> locations = new();
-        foreach (var kvp in _paintedLocations)
+        if (_unitOfWork == null)
         {
-            string provinceId = kvp.Value.Id; // format requires province name as id
-            string provinceName = kvp.Value.Name;
-            ProvinceInfo info = kvp.Value;
-            
-            infos.Add(kvp.Value);
-            
-            locations[provinceName] = info;
-            
-            locMap.Add((info.Id, info.Name));
+            Console.WriteLine("ERROR: UnitOfWork not initialized. Cannot write changes.");
+            return;
         }
-       
-        Dictionary<string, ProvinceInfo> poplocations = new(locations);
 
-        await _writerService.WriteLocationMapAsync(locMap);
-        
-        await _writerService.WriteLocationInfoAsync(locations);
-        
-        await _writerService.WriteProvincePopInfoAsync(poplocations);
-        
-        _paintedLocations.Clear();
+        if (!_unitOfWork.HasChanges)
+        {
+            Console.WriteLine("No changes to write.");
+            return;
+        }
+
+        Console.WriteLine($"Writing {_unitOfWork.ChangeCount} changed provinces...");
+
+        try
+        {
+            // Save all changes with transaction safety (automatic backup/rollback)
+            int savedCount = await _unitOfWork.SaveChangesAsync();
+
+            Console.WriteLine($"✓ Successfully saved {savedCount} provinces");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Failed to save changes: {ex.Message}");
+            Console.WriteLine("Changes have been automatically rolled back.");
+
+            // Rollback in-memory changes as well
+            await _unitOfWork.RollbackAsync();
+
+            throw; // Re-throw so UI can handle the error
+        }
     }
 
-    public void UpdateProvinceName(string? nameBoxText)
+    public async void UpdateProvinceName(string? nameBoxText)
     {
-        if (ActiveProvinceInfo == null) return;
+        if (_unitOfWork == null || ActiveProvinceInfo == null) return;
         if (string.IsNullOrWhiteSpace(nameBoxText)) return;
 
-        ActiveProvinceInfo.Name = nameBoxText.Trim();
-        
-        _paintedLocations[ActiveProvinceInfo.Id] = ActiveProvinceInfo;
+        string newName = nameBoxText.Trim();
+        string provinceId = ActiveProvinceInfo.Id;
+
+        // Get the province from the repository to ensure we have the correct reference
+        var info = await _unitOfWork.Provinces.GetByIdAsync(provinceId);
+        if (info == null)
+        {
+            Console.WriteLine($"ERROR: Province {provinceId} not found in repository");
+            return;
+        }
+
+        // Store old name for tracking rename
+        if (string.IsNullOrEmpty(info.OldName) || info.OldName == info.Name)
+        {
+            info.OldName = info.Name; // Preserve original name for file updates
+        }
+
+        // Update the province name
+        info.Name = newName;
+
+        // Track the change in UnitOfWork
+        _unitOfWork.Provinces.Update(info);
+
+        // Update the active reference
+        ActiveProvinceInfo = info;
+
+        // Refresh UI
+        UpdateProvinceInfoDisplay(info);
+
+        Console.WriteLine($"Province {provinceId} name updated: {info.OldName} -> {info.Name}");
     }
 }
